@@ -1,0 +1,45 @@
+[package]
+edition = "2021"
+name = "deepnest_svg-preprocessor"
+version = "0.0.0"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
+napi = { version = "2.16.13", features = [
+    "compat-mode",
+    "napi1",
+    "napi2",
+    "napi3",
+    "napi4",
+    "napi5",
+    "napi6",
+    "napi7",
+    "napi8",
+    "napi9",
+    "full",
+    "serde-json",
+    "serde-json-ordered",
+    "serde-json",
+    "experimental",
+    "latin1",
+    "chrono_date",
+    "object_indexmap",
+    "tokio",
+    "async",
+    "tokio_rt",
+    "tokio_fs",
+    "tokio_macros",
+    "deferred_trace",
+] }
+napi-derive = { version = "2.16.13", features = ["type-def"] }
+usvg = "0.44.0"
+
+[build-dependencies]
+napi-build = "2.0.1"
+
+[profile.release]
+lto = true
+strip = "symbols"

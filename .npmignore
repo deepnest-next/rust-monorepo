@@ -11,3 +11,6 @@ yarn.lock
 .yarn
 __test__
 renovate.json
+src
+Cargo.toml
+build.rs

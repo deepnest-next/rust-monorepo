@@ -1,6 +1,10 @@
 {
   "name": "@deepnest/svg-preprocessor-darwin-arm64",
   "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepnest-io/nodejs-svg-preprocessor"
+  },
   "os": [
     "darwin"
   ],

@@ -2,9 +2,9 @@
   "name": "@deepnest/svg-preprocessor",
   "repository": {
     "type": "git",
-    "url": "https://github.com/deepnest-io/nodejs-svg-preprocessor"
+    "url": "https://github.com/deepnest-next/node-svg-preprocessor"
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {

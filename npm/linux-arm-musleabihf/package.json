@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/deepnest-io/nodejs-svg-preprocessor"
+    "url": "https://github.com/deepnest-next/node-svg-preprocessor"
   },
   "os": [
     "linux"

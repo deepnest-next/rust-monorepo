@@ -286,7 +286,11 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-slim yarn test
+        run: |
+          docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-slim             npm install --force -g corepack &&
+            npm install --force -g yarn &&
+            corepack enable &&
+            yarn test
   test-linux-x64-musl-binding:
     name: Test bindings on x86_64-unknown-linux-musl - node@${{ matrix.node }}
     needs:
@@ -322,7 +326,11 @@ jobs:
         run: ls -R .
         shell: bash
       - name: Test bindings
-        run: docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-alpine yarn test
+        run: |
+          docker run --rm -v $(pwd):/build -w /build node:${{ matrix.node }}-alpine             npm install --force -g corepack &&
+            npm install --force -g yarn &&
+            corepack enable &&
+            yarn test
   test-linux-aarch64-gnu-binding:
     name: Test bindings on aarch64-unknown-linux-gnu - node@${{ matrix.node }}
     needs:
@@ -364,6 +372,9 @@ jobs:
           image: node:${{ matrix.node }}-slim
           options: "--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build"
           run: |
+            npm install --force -g corepack
+            npm install --force -g yarn
+            corepack enable
             set -e
             yarn test
             ls -la
@@ -403,6 +414,9 @@ jobs:
           image: node:lts-alpine
           options: "--platform linux/arm64 -v ${{ github.workspace }}:/build -w /build"
           run: |
+            npm install --force -g corepack
+            npm install --force -g yarn
+            corepack enable
             set -e
             yarn test
   test-linux-arm-gnueabihf-binding:
@@ -445,6 +459,9 @@ jobs:
           image: node:${{ matrix.node }}-bullseye-slim
           options: "--platform linux/arm/v7 -v ${{ github.workspace }}:/build -w /build"
           run: |
+            npm install --force -g corepack
+            npm install --force -g yarn
+            corepack enable
             set -e
             yarn test
             ls -la

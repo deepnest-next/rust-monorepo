@@ -43,14 +43,14 @@ jobs:
           - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine-zig
-            build: apk add --no-cache musl-dev libstdc++-dev && yarn build --target x86_64-unknown-linux-musl
+            build: apk add --no-cache musl-dev alpine-sdk libstdc++-dev && yarn build --target x86_64-unknown-linux-musl
           - host: macos-latest
             target: aarch64-apple-darwin
             build: yarn build --target aarch64-apple-darwin
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-            build: apt update && apt install -y libstdc++-10-dev-arm64-cross build-essential g++-10-aarch64-linux-gnu-base gcc-10-aarch64-linux-gnu-base && yarn build --target aarch64-unknown-linux-gnu
+            build: apt update && apt install -y libstdc++-10-dev libstdc++-11-dev libstdc++-12-dev  libstdc++-10-dev-arm64-cross libstdc++-11-dev-arm64-cross libstdc++-12-dev-arm64-cross clang build-essential g++ gcc g++-10-aarch64-linux-gnu-base gcc-10-aarch64-linux-gnu-base && yarn build --target aarch64-unknown-linux-gnu
           # - host: ubuntu-latest
           #   target: armv7-unknown-linux-gnueabihf
           #   setup: |
@@ -70,7 +70,7 @@ jobs:
             target: aarch64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine-zig
             build: |-
-              apk add --no-cache musl-dev libstdc++-dev &&
+              apk add --no-cache musl-dev alpine-sdk libstdc++-dev && 
               set -e &&
               rustup target add aarch64-unknown-linux-musl &&
               yarn build --target aarch64-unknown-linux-musl

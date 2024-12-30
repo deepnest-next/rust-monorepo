@@ -310,6 +310,13 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { sum } = nativeBinding
+const { PolyType, ClipType, FillType, sum, minkowskiSumI64, minkowskiSumF64, Clipper, ClipperFloat64 } = nativeBinding
 
+module.exports.PolyType = PolyType
+module.exports.ClipType = ClipType
+module.exports.FillType = FillType
 module.exports.sum = sum
+module.exports.minkowskiSumI64 = minkowskiSumI64
+module.exports.minkowskiSumF64 = minkowskiSumF64
+module.exports.Clipper = Clipper
+module.exports.ClipperFloat64 = ClipperFloat64

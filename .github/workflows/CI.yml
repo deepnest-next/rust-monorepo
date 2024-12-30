@@ -226,11 +226,15 @@ jobs:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
         node:
-          - "18"
           - "20"
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: |
+          npm install --force -g corepack
+          npm install --force -g yarn
+          corepack enable
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -257,11 +261,15 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "18"
           - "20"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: |
+          npm install --force -g corepack
+          npm install --force -g yarn
+          corepack enable
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -287,11 +295,15 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "18"
           - "20"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: |
+          npm install --force -g corepack
+          npm install --force -g yarn
+          corepack enable
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -319,11 +331,15 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "18"
           - "20"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: |
+          npm install --force -g corepack
+          npm install --force -g yarn
+          corepack enable
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -358,6 +374,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: |
+          npm install --force -g corepack
+          npm install --force -g yarn
+          corepack enable
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -392,11 +413,15 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "18"
           - "20"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: |
+          npm install --force -g corepack
+          npm install --force -g yarn
+          corepack enable
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -430,6 +455,11 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: |
+          npm install --force -g corepack
+          npm install --force -g yarn
+          corepack enable
       - name: Setup node
         uses: actions/setup-node@v4
         with:
@@ -469,6 +499,11 @@ jobs:
       - universal-macOS
     steps:
       - uses: actions/checkout@v4
+      - name: Enable Corepack
+        run: |
+          npm install --force -g corepack
+          npm install --force -g yarn
+          corepack enable
       - name: Setup node
         uses: actions/setup-node@v4
         with:

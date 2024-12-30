@@ -50,7 +50,7 @@ jobs:
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-            build: apt update && apt install -y libstdc++-10-dev-amd64-cross build-essential gcc-10-aarch64-linux-gnu-base && yarn build --target aarch64-unknown-linux-gnu
+            build: apt update && apt install -y libstdc++-10-dev-arm64-cross build-essential g++-10-aarch64-linux-gnu-base gcc-10-aarch64-linux-gnu-base && yarn build --target aarch64-unknown-linux-gnu
           # - host: ubuntu-latest
           #   target: armv7-unknown-linux-gnueabihf
           #   setup: |

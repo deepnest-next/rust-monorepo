@@ -88,8 +88,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Enable Corepack
         run: |
-          npm install -g corepack
-          npm install -g yarn
+          npm install --force -g corepack
+          npm install --force -g yarn
           corepack enable
       - name: Setup node
         uses: actions/setup-node@v4

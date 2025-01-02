@@ -87,7 +87,7 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
-      - uses: ilammy/msvc-dev-cmd@v1
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
         if: ${{ contains(matrix.settings.target, 'windows-msvc') }}
       - name: Setup node
         uses: actions/setup-node@v4

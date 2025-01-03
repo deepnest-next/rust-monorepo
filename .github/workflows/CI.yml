@@ -28,10 +28,12 @@ jobs:
           - host: macos-latest
             target: x86_64-apple-darwin
             build: yarn build --target x86_64-apple-darwin
-          - host: windows-latest
+          - host: 
+              group: win_x64
             build: yarn build --target x86_64-pc-windows-msvc
             target: x86_64-pc-windows-msvc
-          - host: windows-latest
+          - host: 
+              group: win_x64
             build: |
               yarn build --target i686-pc-windows-msvc
               yarn test
@@ -43,14 +45,14 @@ jobs:
           - host: ubuntu-latest
             target: x86_64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine-zig
-            build: apk add --no-cache musl-dev alpine-sdk libstdc++-dev && yarn build --target x86_64-unknown-linux-musl
+            build: apk update && apk add musl-dev alpine-sdk boost1.84-dev libc++-dev libstdc++ libstdc++-dev clang19 clang19-extra-tools clang19-libclang clang19-static clang19-dev cmake glib libeconf libelf libintl llvm19 && apk upgrade && yarn build --target x86_64-unknown-linux-musl
           - host: macos-latest
             target: aarch64-apple-darwin
             build: yarn build --target aarch64-apple-darwin
           - host: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-debian-aarch64
-            build: apt update && apt install -y libstdc++-10-dev libstdc++-11-dev libstdc++-12-dev  libstdc++-10-dev-arm64-cross libstdc++-11-dev-arm64-cross libstdc++-12-dev-arm64-cross clang build-essential g++ gcc g++-10-aarch64-linux-gnu-base gcc-10-aarch64-linux-gnu-base && yarn build --target aarch64-unknown-linux-gnu
+            build: apt-get update && apt-get install -y libstdc++-10-dev libstdc++-11-dev libstdc++-12-dev  libstdc++-10-dev-arm64-cross libstdc++-11-dev-arm64-cross libstdc++-12-dev-arm64-cross clang build-essential g++ gcc && yarn build --target aarch64-unknown-linux-gnu
           # - host: ubuntu-latest
           #   target: armv7-unknown-linux-gnueabihf
           #   setup: |
@@ -60,21 +62,25 @@ jobs:
           # - host: ubuntu-latest
           #   target: armv7-unknown-linux-musleabihf
           #   build: yarn build --target armv7-unknown-linux-musleabihf
-          - host: ubuntu-latest
-            target: aarch64-linux-android
-            build: yarn build --target aarch64-linux-android
+          # - host: ubuntu-latest
+          #   target: aarch64-linux-android
+          #   build: yarn build --target aarch64-linux-android
           # - host: ubuntu-latest
           #   target: armv7-linux-androideabi
           #   build: yarn build --target armv7-linux-androideabi
           - host: ubuntu-latest
             target: aarch64-unknown-linux-musl
             docker: ghcr.io/napi-rs/napi-rs/nodejs-rust:lts-alpine-zig
+            docker_options: "--platform linux/arm64"
             build: |-
-              apk add --no-cache musl-dev alpine-sdk libstdc++-dev && 
+              apk update &&
+              apk add musl-dev alpine-sdk boost-dev boost1.84-dev libc++-dev libstdc++ libstdc++-dev clang19 clang19-extra-tools clang19-libclang clang19-static clang19-dev cmake glib libeconf libelf libintl llvm19 &&
+              apk upgrade &&
               set -e &&
               rustup target add aarch64-unknown-linux-musl &&
               yarn build --target aarch64-unknown-linux-musl
-          - host: windows-latest
+          - host: 
+              group: win_x64
             target: aarch64-pc-windows-msvc
             build: yarn build --target aarch64-pc-windows-msvc
           - host: ubuntu-latest
@@ -87,20 +93,38 @@ jobs:
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
+      # - name: Install Visual Studio Components
+      #   if: ${{ contains(matrix.settings.target, 'windows') }}
+      #   shell: pwsh
+      #   run: ./vs2022_setup.ps1
       - uses: TheMrMilchmann/setup-msvc-dev@v3
-        if: ${{ contains(matrix.settings.target, 'windows-msvc') }}
+        if: ${{ contains(matrix.settings.target, 'i686-pc-windows-msvc') }}
+        with:
+          arch: x86
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        if: ${{ contains(matrix.settings.target, 'x86_64-pc-windows-msvc') }}
+        with:
+          arch: x64
+      - uses: TheMrMilchmann/setup-msvc-dev@v3
+        if: ${{ contains(matrix.settings.target, 'aarch64-pc-windows-msvc') }}
+        with:
+          arch: amd64_arm64
       - name: Setup node
         uses: actions/setup-node@v4
         if: ${{ !matrix.settings.docker }}
         with:
           node-version: 20
           cache: yarn
-      - name: Install
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust Toolchain
+        uses: actions-rs/toolchain@v1
         if: ${{ !matrix.settings.docker }}
         with:
           toolchain: stable
-          targets: ${{ matrix.settings.target }}
+          target: ${{ matrix.settings.target }}
+          profile: complete 
+      - name: Install Rust ToolChain 2
+        run: |
+          rustup target add ${{ matrix.settings.target }}
       - name: Cache cargo
         uses: actions/cache@v4
         with:
@@ -118,11 +142,9 @@ jobs:
       - name: Setup toolchain
         run: ${{ matrix.settings.setup }}
         if: ${{ matrix.settings.setup }}
-        shell: bash
       - name: Setup node x86
         if: matrix.settings.target == 'i686-pc-windows-msvc'
         run: yarn config set supportedArchitectures.cpu "ia32"
-        shell: bash
       - name: Install dependencies
         run: yarn install
       - name: Setup node x86
@@ -132,17 +154,21 @@ jobs:
           node-version: 20
           cache: yarn
           architecture: x86
+      - name: Set up QEMU
+        if: ${{ matrix.settings.docker && matrix.settings.docker_options && contains(matrix.settings.target, 'aarch64') && contains(matrix.settings.target, 'musl') }}
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: arm64
       - name: Build in docker
         uses: addnab/docker-run-action@v3
         if: ${{ matrix.settings.docker }}
         with:
           image: ${{ matrix.settings.docker }}
-          options: "--user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build"
+          options: "${{ matrix.settings.docker_options || '' }} --user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build"
           run: ${{ matrix.settings.build }}
       - name: Build
         run: ${{ matrix.settings.build }}
         if: ${{ !matrix.settings.docker }}
-        shell: bash
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

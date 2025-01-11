@@ -143,7 +143,7 @@ impl Clipper {
     }
     if let PolyType::Clip = poly_type {
       self.clipper.add_clip(path_a);
-    } else if let PolyType::Clip = poly_type {
+    } else if let PolyType::Subject = poly_type {
       self.clipper.add_subject(path_a);
     } else {
       panic!("Invalid PolyType");
@@ -214,7 +214,7 @@ impl ClipperFloat64 {
     }
     if let PolyType::Clip = poly_type {
       self.clipper.add_clip(path_a);
-    } else if let PolyType::Clip = poly_type {
+    } else if let PolyType::Subject = poly_type {
       self.clipper.add_subject(path_a);
     } else {
       panic!("Invalid PolyType: {:?}", poly_type);

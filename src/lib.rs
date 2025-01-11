@@ -7,12 +7,14 @@ use clipper2_sys::{
 extern crate napi_derive;
 
 #[napi]
+#[derive(Debug)]
 pub enum PolyType {
   Subject,
   Clip,
 }
 
 #[napi]
+#[derive(Debug)]
 pub enum ClipType {
   None,
   Intersection,
@@ -22,6 +24,7 @@ pub enum ClipType {
 }
 
 #[napi]
+#[derive(Debug)]
 pub enum FillType {
   EvenOdd,
   NonZero,
@@ -214,7 +217,7 @@ impl ClipperFloat64 {
     } else if let PolyType::Clip = poly_type {
       self.clipper.add_subject(path_a);
     } else {
-      panic!("Invalid PolyType");
+      panic!("Invalid PolyType: {:?}", poly_type);
     }
   }
 
@@ -226,12 +229,14 @@ impl ClipperFloat64 {
       ClipType::Union => ClipTypeOrig::Union,
       ClipType::Difference => ClipTypeOrig::Difference,
       ClipType::Xor => ClipTypeOrig::Xor,
+      _ => panic!("Invalid PolyType: {:?}", clip_type),
     };
     let fill_type = match fill_type {
       FillType::EvenOdd => FillRule::EvenOdd,
       FillType::NonZero => FillRule::NonZero,
       FillType::Positive => FillRule::Positive,
       FillType::Negative => FillRule::Negative,
+      _ => panic!("Invalid PolyType: {:?}", fill_type),
     };
     let path_c = self.clipper.boolean_operation(clip_type, fill_type);
     let mut result = vec![];

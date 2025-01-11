@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "deepnest_clipper2"
-version = "0.0.1"
+version = "0.0.2"
 
 [lib]
 crate-type = ["cdylib"]
@@ -35,7 +35,7 @@ napi = { version = "2.16.13", features = [
   "deferred_trace",
 ] }
 napi-derive = { version = "2.16.13", features = ["type-def"] }
-clipper2-sys = { git = "https://github.com/deepnest-next/fork-rust-clipper2-sys", branch = "master" }
+clipper2-sys = { git = "https://github.com/songhuaixu/clipper2-sys", branch = "master" }
 #geo = "0.29.3"
 
 [build-dependencies]

@@ -23,7 +23,7 @@
       ]
     }
   },
-  "license": "MIT",
+  "license": "AGPL-3.0-only",
   "devDependencies": {
     "@napi-rs/cli": "^2.18.4",
     "ava": "^6.0.1"

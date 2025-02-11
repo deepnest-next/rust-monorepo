@@ -14,7 +14,3 @@ usvg.workspace = true
 
 [build-dependencies]
 napi-build.workspace = true
-
-[profile.release]
-lto = true
-strip = "symbols"

@@ -15,7 +15,3 @@ clipper2-sys = { git = "https://github.com/songhuaixu/clipper2-sys", branch = "m
 
 [build-dependencies]
 napi-build.workspace = true
-
-[profile.release]
-lto = true
-strip = "symbols"

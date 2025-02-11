@@ -8,7 +8,7 @@
   "files": [
     "clipper2.darwin-universal.node"
   ],
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "engines": {
     "node": ">= 10"
   },

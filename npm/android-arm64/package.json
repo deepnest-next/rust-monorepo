@@ -11,7 +11,7 @@
   "files": [
     "clipper2.android-arm64.node"
   ],
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "engines": {
     "node": ">= 10"
   },

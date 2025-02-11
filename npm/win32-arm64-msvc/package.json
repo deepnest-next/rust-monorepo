@@ -11,7 +11,7 @@
   "files": [
     "clipper2.win32-arm64-msvc.node"
   ],
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
   "engines": {
     "node": ">= 10"
   },

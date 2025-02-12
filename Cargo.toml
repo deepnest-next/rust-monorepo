@@ -1,38 +1,49 @@
 [workspace]
 resolver = "2"
-members = [ "crates/clipper2", "crates/deepnest-lib", "crates/geometry-utils", "crates/node-clipper2", "crates/node-svg-preprocessor" ]
+members = [
+    "crates/clipper2",
+    "crates/deepnest-lib", "crates/deepnest-types",
+    "crates/geometry-utils",
+    "crates/node-clipper2",
+    "crates/node-svg-preprocessor",
+]
 
 
 [workspace.dependencies]
 # Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
 napi = { version = "2.16.13", features = [
-  "compat-mode",
-  "napi1",
-  "napi2",
-  "napi3",
-  "napi4",
-  "napi5",
-  "napi6",
-  "napi7",
-  "napi8",
-  "napi9",
-  "full",
-  "serde-json",
-  "serde-json-ordered",
-  "serde-json",
-  "experimental",
-  "latin1",
-  "chrono_date",
-  "object_indexmap",
-  "tokio",
-  "async",
-  "tokio_rt",
-  "tokio_fs",
-  "tokio_macros",
-  "deferred_trace",
+    "compat-mode",
+    "napi1",
+    "napi2",
+    "napi3",
+    "napi4",
+    "napi5",
+    "napi6",
+    "napi7",
+    "napi8",
+    "napi9",
+    "full",
+    "serde-json",
+    "serde-json-ordered",
+    "serde-json",
+    "experimental",
+    "latin1",
+    "chrono_date",
+    "object_indexmap",
+    "tokio",
+    "async",
+    "tokio_rt",
+    "tokio_fs",
+    "tokio_macros",
+    "deferred_trace",
 ] }
-napi-derive = { version = "2.16.13", features = ["type-def"] }
+napi-derive = { version = "2.16.13", default-features = true}
 usvg = "0.44.0"
-
-[workspace.build-dependencies]
 napi-build = "2.1.4"
+cfg-if = "1"
+delegate = "0.13.2" 
+
+
+[profile.release]
+lto = true
+strip = "symbols"

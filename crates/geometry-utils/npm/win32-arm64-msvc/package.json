@@ -1,0 +1,35 @@
+{
+  "name": "@deepnest/geometry-utils-win32-arm64-msvc",
+  "version": "0.0.1",
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "main": "geometry-utils.win32-arm64-msvc.node",
+  "files": [
+    "geometry-utils.win32-arm64-msvc.node"
+  ],
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">= 10"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bugs": {
+    "url": "https://github.com/deepnest-next/rust-monorepo/issues"
+  },
+  "homepage": "https://www.deepnest.net",
+  "funding": [
+    {
+      "type": "patreon",
+      "url": "https://patreon.com/deepnest_next"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepnest-next/rust-monorepo.git"
+  }
+}

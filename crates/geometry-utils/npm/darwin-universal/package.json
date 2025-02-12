@@ -1,0 +1,32 @@
+{
+  "name": "@deepnest/geometry-utils-darwin-universal",
+  "version": "0.0.1",
+  "os": [
+    "darwin"
+  ],
+  "main": "geometry-utils.darwin-universal.node",
+  "files": [
+    "geometry-utils.darwin-universal.node"
+  ],
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">= 10"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bugs": {
+    "url": "https://github.com/deepnest-next/rust-monorepo/issues"
+  },
+  "homepage": "https://www.deepnest.net",
+  "funding": [
+    {
+      "type": "patreon",
+      "url": "https://patreon.com/deepnest_next"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepnest-next/rust-monorepo.git"
+  }
+}

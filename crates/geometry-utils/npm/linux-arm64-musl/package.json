@@ -1,0 +1,38 @@
+{
+  "name": "@deepnest/geometry-utils-linux-arm64-musl",
+  "version": "0.0.1",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "main": "geometry-utils.linux-arm64-musl.node",
+  "files": [
+    "geometry-utils.linux-arm64-musl.node"
+  ],
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">= 10"
+  },
+  "libc": [
+    "musl"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "bugs": {
+    "url": "https://github.com/deepnest-next/rust-monorepo/issues"
+  },
+  "homepage": "https://www.deepnest.net",
+  "funding": [
+    {
+      "type": "patreon",
+      "url": "https://patreon.com/deepnest_next"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepnest-next/rust-monorepo.git"
+  }
+}

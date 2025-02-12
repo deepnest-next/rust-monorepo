@@ -1,21 +1,20 @@
 [package]
-name = "geometry-utils"
+name = "deepnest-types"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib","rlib"]
 
 [dependencies]
-# Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
 napi = { workspace = true, optional = true }
 napi-derive = { workspace = true, optional = true }
 delegate.workspace = true
-deepnest-types = { path = "../deepnest-types" }
+derive_more = { version = "2", features = ["full"] }
 
 [build-dependencies]
 napi-build = { workspace = true, optional = true }
 
 [features]
 default = []
-node = ["deepnest-types/node", "napi", "napi-build", "napi-derive" ]
+node = ["napi", "napi-build", "napi-derive"]

@@ -11,18 +11,14 @@ pub use crate::output_lib::*;
 // #[cfg(feature = "node")]
 // pub use crate::output_napi::NodeGeometryUtils;
 
-
-
-
-
 #[cfg(test)]
 mod tests {
 
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn it_works() {
-        let result = almost_equal(2., 2.,Some(5.));
-        assert_eq!(result, true);
-    }
+  #[test]
+  fn it_works() {
+    let result = almost_equal(2., 2., Some(5.));
+    assert_eq!(result, true);
+  }
 }

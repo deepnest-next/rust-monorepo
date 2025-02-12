@@ -59,13 +59,27 @@ export declare class GeometryUtils {
    * - The computed intersection is not finite, or
    * - For finite segments, the intersection lies outside at least one segment.
    */
-  static lineIntersect(a: Point, b: Point, e: Point, f: Point, infinite: boolean): Point | null
+  static lineIntersect(a: Point, b: Point, e: Point, f: Point, infinite?: boolean | undefined | null): Point | null
   /**
    * Returns true if the Euclidean distance between points `a` and `b` is less than the given tolerance.
    *
    * If `tolerance` is `None`, the default tolerance `DEFAULT_TOLERANCE` is used.
    */
   static almostEqualPoints(a: Point, b: Point, tolerance?: number | undefined | null): boolean
+  /**
+   * Determines if `point` lies inside the given `polygon`.
+   *
+   * Returns:
+   * - `Some(true)` if `point` is strictly inside the polygon,
+   * - `Some(false)` if `point` is strictly outside,
+   * - `None` if `point` lies exactly on a vertex or on an edge (within `tolerance`).
+   */
+  static pointInPolygon(point: Point, polygon: Polygon, tolerance?: number | undefined | null): boolean | null
+  /**
+   * Returns true if the edges of polygon A and polygon B intersect.
+   * The function tests every segment of A (with its optional offset) against every segment of B.
+   */
+  static intersect(a: Polygon, b: Polygon): boolean
 }
 export declare class QuadraticBezier {
   /**
@@ -96,10 +110,12 @@ export declare namespace Point {
   export function rotatePoint(point: Point, angle: number): Point
 }
 export declare namespace Polygon {
-  /** Point */
+  /** Polygon */
   export interface Polygon {
     points: Array<Point>
     children?: Array<Array<Point>>
+    offsetx?: number
+    offsety?: number
   }
   export function polygonArea(polygon: Polygon): number
 }

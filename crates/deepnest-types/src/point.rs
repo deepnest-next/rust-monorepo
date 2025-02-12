@@ -1,8 +1,9 @@
 use derive_more::{From, Into};
+use std::cmp::Ordering;
 
 /// Point
 #[cfg_attr(feature = "node", napi(object, namespace = "Point"))]
-#[derive(Debug, Clone, Copy, From, Into)]
+#[derive(Debug, Clone, Copy, PartialEq, From, Into)]
 pub struct Point {
   pub x: f64,
   pub y: f64,

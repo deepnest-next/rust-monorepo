@@ -310,11 +310,16 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { rotatePoint, deepnestPolygonArea, almostEqual, polygonArea, getPolygonBounds, withinDistance } = nativeBinding
+const { Arc, CubicBezier, DEFAULT_TOLERANCE, DEFAULT_CURVE_TOLERANCE, GeometryUtils, QuadraticBezier, BezierSegment, Point, Polygon, Rect, Vector } = nativeBinding
 
-module.exports.rotatePoint = rotatePoint
-module.exports.deepnestPolygonArea = deepnestPolygonArea
-module.exports.almostEqual = almostEqual
-module.exports.polygonArea = polygonArea
-module.exports.getPolygonBounds = getPolygonBounds
-module.exports.withinDistance = withinDistance
+module.exports.Arc = Arc
+module.exports.CubicBezier = CubicBezier
+module.exports.DEFAULT_TOLERANCE = DEFAULT_TOLERANCE
+module.exports.DEFAULT_CURVE_TOLERANCE = DEFAULT_CURVE_TOLERANCE
+module.exports.GeometryUtils = GeometryUtils
+module.exports.QuadraticBezier = QuadraticBezier
+module.exports.BezierSegment = BezierSegment
+module.exports.Point = Point
+module.exports.Polygon = Polygon
+module.exports.Rect = Rect
+module.exports.Vector = Vector

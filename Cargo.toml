@@ -42,6 +42,7 @@ usvg = "0.44.0"
 napi-build = "2.1.4"
 cfg-if = "1"
 delegate = "0.13.2" 
+derive_more = { version = "2", features = ["full"] }
 
 
 [profile.release]

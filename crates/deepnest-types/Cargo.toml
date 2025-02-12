@@ -10,7 +10,7 @@ crate-type = ["cdylib","rlib"]
 napi = { workspace = true, optional = true }
 napi-derive = { workspace = true, optional = true }
 delegate.workspace = true
-derive_more = { version = "2", features = ["full"] }
+derive_more.workspace = true
 
 [build-dependencies]
 napi-build = { workspace = true, optional = true }

@@ -325,7 +325,7 @@ name = "geometry-utils"
 version = "0.1.0"
 dependencies = [
  "deepnest-types",
- "delegate",
+ "derive_more",
  "napi",
  "napi-build",
  "napi-derive",

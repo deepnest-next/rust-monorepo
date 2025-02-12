@@ -10,12 +10,12 @@ crate-type = ["cdylib"]
 # Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
 napi = { workspace = true, optional = true }
 napi-derive = { workspace = true, optional = true }
-delegate.workspace = true
+derive_more.workspace = true
 deepnest-types = { path = "../deepnest-types" }
 
 [build-dependencies]
 napi-build = { workspace = true, optional = true }
 
 [features]
-default = []
+default = ["node"]
 node = ["deepnest-types/node", "napi", "napi-build", "napi-derive" ]

@@ -7,7 +7,9 @@ extern crate napi_derive;
 pub mod point;
 pub mod polygon;
 pub mod rect;
+pub mod vector;
 
 pub use point::*;
 pub use polygon::*;
 pub use rect::*;
+pub use vector::*;

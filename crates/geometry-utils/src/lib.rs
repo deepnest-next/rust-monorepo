@@ -1,15 +1,17 @@
+pub mod arc;
+pub mod cubic_bezier;
+
 // lib.rs
-#[cfg(feature = "node")]
+
 #[macro_use]
 extern crate napi_derive;
+use napi::bindgen_prelude::*;
 
 pub mod constants;
-pub mod output_lib;
-pub use crate::output_lib::*;
+pub mod geometryutils;
+pub mod quadratic_bezier;
+pub use crate::geometryutils::*;
 
-// pub mod output_napi;
-// #[cfg(feature = "node")]
-// pub use crate::output_napi::NodeGeometryUtils;
 
 #[cfg(test)]
 mod tests {
@@ -18,7 +20,7 @@ mod tests {
 
   #[test]
   fn it_works() {
-    let result = almost_equal(2., 2., Some(5.));
+    let result = GeometryUtils::almost_equal(2., 2., Some(5.));
     assert_eq!(result, true);
   }
 }

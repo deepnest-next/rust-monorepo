@@ -23,9 +23,14 @@ impl CubicBezier {
   ///
   /// Internally, the tolerance is adjusted as: `tol_adjusted = 16 * tol²`.
   // TODO: do we need it public?
-  pub fn is_flat(p1: Point, p2: Point, c1: Point, c2: Point,
-    tolerance: Option<f64>,) -> bool {
-        let tol = tolerance.unwrap_or(DEFAULT_CURVE_TOLERANCE);
+  pub fn is_flat(
+    p1: Point,
+    p2: Point,
+    c1: Point,
+    c2: Point,
+    tolerance: Option<f64>,
+  ) -> bool {
+    let tol = tolerance.unwrap_or(DEFAULT_CURVE_TOLERANCE);
     let tol_adjusted = 16.0 * tol * tol;
 
     let mut ux = 3.0 * c1.x - 2.0 * p1.x - p2.x;
@@ -116,7 +121,13 @@ impl CubicBezier {
   /// The function returns a vector of points along the curve. The initial point `p1` is included,
   /// and each flat segment’s end point is appended.
   #[napi]
-  pub fn linearize(p1: Point, p2: Point, c1: Point, c2: Point, tolerance: Option<f64>) -> Vec<Point> {
+  pub fn linearize(
+    p1: Point,
+    p2: Point,
+    c1: Point,
+    c2: Point,
+    tolerance: Option<f64>,
+  ) -> Vec<Point> {
     let tol = tolerance.unwrap_or(DEFAULT_CURVE_TOLERANCE);
     let mut finished = Vec::new();
     finished.push(p1);
@@ -131,7 +142,8 @@ impl CubicBezier {
         finished.push(segment.p2);
       } else {
         // Otherwise, subdivide the segment and process both halves.
-        let (seg1, seg2) = CubicBezier::subdivide(segment.p1, segment.p2, segment.c1, segment.c2, Some(0.5));
+        let (seg1, seg2) =
+          CubicBezier::subdivide(segment.p1, segment.p2, segment.c1, segment.c2, Some(0.5));
         // Push seg1 and seg2 to the front so that they are processed next.
         todo.push_front(seg2);
         todo.push_front(seg1);

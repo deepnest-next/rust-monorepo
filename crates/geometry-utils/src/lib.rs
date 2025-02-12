@@ -11,7 +11,6 @@ pub mod geometryutils;
 pub mod quadratic_bezier;
 pub use crate::geometryutils::*;
 
-
 #[cfg(test)]
 mod tests {
 

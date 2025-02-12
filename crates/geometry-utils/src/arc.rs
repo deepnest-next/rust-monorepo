@@ -5,7 +5,6 @@ use std::collections::VecDeque;
 
 use crate::geometryutils::{degrees_to_radians, radians_to_degrees, GeometryUtils};
 
-
 #[derive(Debug, Clone, Copy, From, Into)]
 #[napi]
 pub struct Arc;
@@ -168,7 +167,7 @@ pub fn svg_to_center(
   let n = (ux * ux + uy * uy).sqrt();
   let p = ux;
   let sign_theta = if uy < 0.0 { -1.0 } else { 1.0 };
-  let mut theta = sign_theta * (p/n).acos();
+  let mut theta = sign_theta * (p / n).acos();
   theta = radians_to_degrees(theta);
 
   // Compute the sweep (extent) angle.

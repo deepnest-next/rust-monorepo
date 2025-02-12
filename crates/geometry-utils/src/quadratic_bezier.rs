@@ -4,8 +4,6 @@ use derive_more::{From, Into};
 use napi::bindgen_prelude::*;
 use std::collections::VecDeque;
 
-
-
 #[derive(Debug, Clone, Copy, From, Into)]
 #[napi]
 pub struct QuadraticBezier;
@@ -28,7 +26,12 @@ impl QuadraticBezier {
   ///
   /// The tolerance is adjusted internally as `4 * tol²`.
   // TODO: do we need it public?
-  pub fn is_flat(p1: Point, p2: Point, c1: Point, tolerance: Option<f64>) -> bool {
+  pub fn is_flat(
+    p1: Point,
+    p2: Point,
+    c1: Point,
+    tolerance: Option<f64>,
+  ) -> bool {
     let tol = tolerance.unwrap_or(DEFAULT_CURVE_TOLERANCE);
     let tol_adjusted = 4.0 * tol * tol;
     let ux = 2.0 * c1.x - p1.x - p2.x;
@@ -42,7 +45,12 @@ impl QuadraticBezier {
   /// Returns a tuple with two new `BezierSegment` values representing the
   /// subdivided curves.
   // TODO: do we need it public?
-  pub fn subdivide(p1: Point, p2: Point, c1: Point, tolerance: Option<f64>) -> (BezierSegment, BezierSegment) {
+  pub fn subdivide(
+    p1: Point,
+    p2: Point,
+    c1: Point,
+    tolerance: Option<f64>,
+  ) -> (BezierSegment, BezierSegment) {
     let tol = tolerance.unwrap_or(DEFAULT_CURVE_TOLERANCE);
     let mid1 = Point {
       x: p1.x + (c1.x - p1.x) * tol,
@@ -78,7 +86,12 @@ impl QuadraticBezier {
   /// The returned vector contains the starting point and the end point of each
   /// flat segment, in order along the curve.
   #[napi]
-  pub fn linearize(p1: Point, p2: Point, c1: Point, tolerance: Option<f64>) -> Vec<Point> {
+  pub fn linearize(
+    p1: Point,
+    p2: Point,
+    c1: Point,
+    tolerance: Option<f64>,
+  ) -> Vec<Point> {
     let tol = tolerance.unwrap_or(DEFAULT_CURVE_TOLERANCE);
     let mut finished = Vec::new();
     finished.push(p1);
@@ -93,7 +106,8 @@ impl QuadraticBezier {
         finished.push(segment.p2);
       } else {
         // Subdivide the segment at t=0.5 and process both halves.
-        let (seg1, seg2) = QuadraticBezier::subdivide(segment.p1, segment.p2, segment.c1, Some(0.5));
+        let (seg1, seg2) =
+          QuadraticBezier::subdivide(segment.p1, segment.p2, segment.c1, Some(0.5));
         // Insert in order so that seg1 (the first half) is processed next.
         todo.push_front(seg2);
         todo.push_front(seg1);

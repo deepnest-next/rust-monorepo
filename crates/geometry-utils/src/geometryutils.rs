@@ -1,7 +1,7 @@
 use crate::constants::DEFAULT_TOLERANCE;
 use deepnest_types::{Point, Rect};
-use napi::bindgen_prelude::*;
 use derive_more::{From, Into};
+use napi::bindgen_prelude::*;
 
 #[derive(Debug, Clone, Copy, From, Into)]
 #[napi]
@@ -12,7 +12,11 @@ impl GeometryUtils {
   /// Returns `true` if `a` and `b` are approximately equal within the given tolerance.
   /// If `tolerance` is `None`, a default tolerance of `1e-9` is used.
   #[napi]
-  pub fn almost_equal(a: f64, b: f64, tolerance: Option<f64>) -> bool {
+  pub fn almost_equal(
+    a: f64,
+    b: f64,
+    tolerance: Option<f64>,
+  ) -> bool {
     let tol = tolerance.unwrap_or(DEFAULT_TOLERANCE);
     // TODO: is origin "<" or "<=" correct?
     (a - b).abs() <= tol
@@ -61,7 +65,11 @@ impl GeometryUtils {
 
   /// is p1 and p2 within distance
   #[napi]
-  pub fn within_distance(p1: Point, p2: Point, distance: f64) -> bool {
+  pub fn within_distance(
+    p1: Point,
+    p2: Point,
+    distance: f64,
+  ) -> bool {
     let dx = p1.x - p2.x;
     let dy = p1.y - p2.y;
 
@@ -83,7 +91,13 @@ impl GeometryUtils {
   /// - The computed intersection is not finite, or
   /// - For finite segments, the intersection lies outside at least one segment.
   #[napi]
-  pub fn line_intersect(A: Point, B: Point, E: Point, F: Point, infinite: bool) -> Option<Point> {
+  pub fn line_intersect(
+    A: Point,
+    B: Point,
+    E: Point,
+    F: Point,
+    infinite: bool,
+  ) -> Option<Point> {
     // Compute coefficients for the line equations:
     // For AB: a1 * x + b1 * y + c1 = 0
     let a1 = B.y - A.y;
@@ -128,14 +142,17 @@ impl GeometryUtils {
   ///
   /// If `tolerance` is `None`, the default tolerance `DEFAULT_TOLERANCE` is used.
   #[napi]
-  pub fn almost_equal_points(a: Point, b: Point, tolerance: Option<f64>) -> bool {
+  pub fn almost_equal_points(
+    a: Point,
+    b: Point,
+    tolerance: Option<f64>,
+  ) -> bool {
     let tol = tolerance.unwrap_or(DEFAULT_TOLERANCE);
     let dx = a.x - b.x;
     let dy = a.y - b.y;
     (dx * dx + dy * dy) < (tol * tol)
   }
 }
-
 
 // START::Helper Functions
 
@@ -167,7 +184,12 @@ pub fn normalize_vector(v: Point) -> Point {
 
 /// Returns `true` if point `p` lies strictly on the line segment defined by `A` and `B`,
 /// excluding the endpoints.
-pub fn on_segment(A: Point, B: Point, p: Point, tolerance: Option<f64>) -> bool {
+pub fn on_segment(
+  A: Point,
+  B: Point,
+  p: Point,
+  tolerance: Option<f64>,
+) -> bool {
   let tol = tolerance.unwrap_or(DEFAULT_TOLERANCE);
   // Exclude endpoints.
   if (GeometryUtils::almost_equal(p.x, A.x, Some(tol))
@@ -327,7 +349,12 @@ fn line_intersect(A: Point, B: Point, E: Point, F: Point, infinite: bool) -> Opt
 } */
 
 /// Returns `true` if `val` is between `a` and `b` (inclusive, within tolerance).
-pub fn in_range(val: f64, a: f64, b: f64, tolerance: Option<f64>) -> bool {
+pub fn in_range(
+  val: f64,
+  a: f64,
+  b: f64,
+  tolerance: Option<f64>,
+) -> bool {
   let tol = tolerance.unwrap_or(DEFAULT_TOLERANCE);
   let (min_val, max_val) = if a < b { (a, b) } else { (b, a) };
   val >= min_val - tol && val <= max_val + tol

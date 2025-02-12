@@ -1,7 +1,6 @@
 use crate::constants::DEFAULT_TOLERANCE;
 use deepnest_types::{Point, Rect};
 use derive_more::{From, Into};
-use napi::bindgen_prelude::*;
 
 #[derive(Debug, Clone, Copy, From, Into)]
 #[napi]
@@ -92,22 +91,22 @@ impl GeometryUtils {
   /// - For finite segments, the intersection lies outside at least one segment.
   #[napi]
   pub fn line_intersect(
-    A: Point,
-    B: Point,
-    E: Point,
-    F: Point,
+    a: Point,
+    b: Point,
+    e: Point,
+    f: Point,
     infinite: bool,
   ) -> Option<Point> {
     // Compute coefficients for the line equations:
     // For AB: a1 * x + b1 * y + c1 = 0
-    let a1 = B.y - A.y;
-    let b1 = A.x - B.x;
-    let c1 = B.x * A.y - A.x * B.y;
+    let a1 = b.y - a.y;
+    let b1 = a.x - b.x;
+    let c1 = b.x * a.y - a.x * b.y;
 
     // For EF: a2 * x + b2 * y + c2 = 0
-    let a2 = F.y - E.y;
-    let b2 = E.x - F.x;
-    let c2 = F.x * E.y - E.x * F.y;
+    let a2 = f.y - e.y;
+    let b2 = e.x - f.x;
+    let c2 = f.x * e.y - e.x * f.y;
 
     // Denominator for the intersection formulas.
     let denom = a1 * b2 - a2 * b1;
@@ -127,10 +126,10 @@ impl GeometryUtils {
 
     if !infinite {
       // For finite segments, the intersection must lie within the bounding box of each segment.
-      if !in_range(x, A.x, B.x, None) || !in_range(y, A.y, B.y, None) {
+      if !in_range(x, a.x, b.x, None) || !in_range(y, a.y, b.y, None) {
         return None;
       }
-      if !in_range(x, E.x, F.x, None) || !in_range(y, E.y, F.y, None) {
+      if !in_range(x, e.x, f.x, None) || !in_range(y, e.y, f.y, None) {
         return None;
       }
     }
@@ -185,40 +184,40 @@ pub fn normalize_vector(v: Point) -> Point {
 /// Returns `true` if point `p` lies strictly on the line segment defined by `A` and `B`,
 /// excluding the endpoints.
 pub fn on_segment(
-  A: Point,
-  B: Point,
+  a: Point,
+  b: Point,
   p: Point,
   tolerance: Option<f64>,
 ) -> bool {
   let tol = tolerance.unwrap_or(DEFAULT_TOLERANCE);
   // Exclude endpoints.
-  if (GeometryUtils::almost_equal(p.x, A.x, Some(tol))
-    && GeometryUtils::almost_equal(p.y, A.y, Some(tol)))
-    || (GeometryUtils::almost_equal(p.x, B.x, Some(tol))
-      && GeometryUtils::almost_equal(p.y, B.y, Some(tol)))
+  if (GeometryUtils::almost_equal(p.x, a.x, Some(tol))
+    && GeometryUtils::almost_equal(p.y, a.y, Some(tol)))
+    || (GeometryUtils::almost_equal(p.x, b.x, Some(tol))
+      && GeometryUtils::almost_equal(p.y, b.y, Some(tol)))
   {
     return false;
   }
 
   // Check that p lies within the bounding box of A and B.
-  let (min_x, max_x) = if A.x < B.x { (A.x, B.x) } else { (B.x, A.x) };
-  let (min_y, max_y) = if A.y < B.y { (A.y, B.y) } else { (B.y, A.y) };
+  let (min_x, max_x) = if a.x < b.x { (a.x, b.x) } else { (b.x, a.x) };
+  let (min_y, max_y) = if a.y < b.y { (a.y, b.y) } else { (b.y, a.y) };
   if p.x < min_x - tol || p.x > max_x + tol || p.y < min_y - tol || p.y > max_y + tol {
     return false;
   }
 
   // Check collinearity using the cross product.
-  let cross = (p.y - A.y) * (B.x - A.x) - (p.x - A.x) * (B.y - A.y);
+  let cross = (p.y - a.y) * (b.x - a.x) - (p.x - a.x) * (b.y - a.y);
   if cross.abs() > tol {
     return false;
   }
 
   // Check that p is strictly between A and B via the dot product.
-  let dot = (p.x - A.x) * (B.x - A.x) + (p.y - A.y) * (B.y - A.y);
+  let dot = (p.x - a.x) * (b.x - a.x) + (p.y - a.y) * (b.y - a.y);
   if dot <= tol {
     return false;
   }
-  let len2 = (B.x - A.x).powi(2) + (B.y - A.y).powi(2);
+  let len2 = (b.x - a.x).powi(2) + (b.y - a.y).powi(2);
   if dot >= len2 - tol {
     return false;
   }

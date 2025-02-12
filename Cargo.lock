@@ -129,7 +129,7 @@ dependencies = [
 
 [[package]]
 name = "clipper2"
-version = "0.1.0"
+version = "0.100.0"
 
 [[package]]
 name = "clipper2-sys"
@@ -200,11 +200,11 @@ checksum = "5c297a1c74b71ae29df00c3e22dd9534821d60eb9af5a0192823fa2acea70c2a"
 
 [[package]]
 name = "deepnest-lib"
-version = "0.1.0"
+version = "0.100.0"
 
 [[package]]
 name = "deepnest-types"
-version = "0.1.0"
+version = "0.100.0"
 dependencies = [
  "delegate",
  "derive_more",
@@ -215,7 +215,7 @@ dependencies = [
 
 [[package]]
 name = "deepnest_clipper2"
-version = "0.0.2"
+version = "0.100.0"
 dependencies = [
  "clipper2-sys",
  "napi",
@@ -225,7 +225,7 @@ dependencies = [
 
 [[package]]
 name = "deepnest_svg-preprocessor"
-version = "0.0.0"
+version = "0.100.0"
 dependencies = [
  "napi",
  "napi-build",
@@ -322,7 +322,7 @@ dependencies = [
 
 [[package]]
 name = "geometry-utils"
-version = "0.1.0"
+version = "0.100.0"
 dependencies = [
  "deepnest-types",
  "derive_more",

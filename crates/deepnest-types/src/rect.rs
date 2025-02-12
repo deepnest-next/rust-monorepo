@@ -1,8 +1,6 @@
 #[allow(unused_imports)]
 use delegate::delegate;
 use derive_more::{From, Into};
-#[cfg(feature = "node")]
-use napi::bindgen_prelude::*;
 
 /// Rect used for polygon bounds
 #[cfg_attr(feature = "node", napi(object, namespace = "Rect"))]

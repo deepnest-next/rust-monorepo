@@ -1,6 +1,3 @@
-#[cfg(feature = "node")]
-use napi::bindgen_prelude::*;
-
 use derive_more::{From, Into};
 
 use crate::point::Point;

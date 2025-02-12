@@ -1,7 +1,6 @@
 use crate::constants::DEFAULT_CURVE_TOLERANCE;
 use deepnest_types::Point;
 use derive_more::{From, Into};
-use napi::bindgen_prelude::*;
 use std::collections::VecDeque;
 
 #[derive(Debug, Clone, Copy, From, Into)]

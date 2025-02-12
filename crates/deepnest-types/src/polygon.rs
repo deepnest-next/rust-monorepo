@@ -2,12 +2,14 @@ use derive_more::{From, Into};
 
 use crate::point::Point;
 
-/// Point
+/// Polygon
 #[cfg_attr(feature = "node", napi(object, namespace = "Polygon"))]
 #[derive(Debug, Clone, From, Into)]
 pub struct Polygon {
   pub points: Vec<Point>,
   pub children: Option<Vec<Vec<Point>>>,
+  pub offsetx:Option<f64>,
+  pub offsety:Option<f64>,
 }
 
 #[cfg_attr(feature = "node", napi(namespace = "Polygon"))]

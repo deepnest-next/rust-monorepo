@@ -2,7 +2,7 @@ use deepnest_types::Point;
 use derive_more::{From, Into};
 use std::collections::VecDeque;
 
-use crate::geometryutils::{degrees_to_radians, radians_to_degrees, GeometryUtils};
+use crate::geometryutils::GeometryUtils;
 
 #[derive(Debug, Clone, Copy, From, Into)]
 #[napi]
@@ -61,9 +61,9 @@ impl Arc {
   ) -> SvgArc {
     let theta2 = theta1 + extent;
 
-    let theta1_rad = degrees_to_radians(theta1);
-    let theta2_rad = degrees_to_radians(theta2);
-    let angle_rad = degrees_to_radians(angle_degrees);
+    let theta1_rad = GeometryUtils::degrees_to_radians(theta1);
+    let theta2_rad = GeometryUtils::degrees_to_radians(theta2);
+    let angle_rad = GeometryUtils::degrees_to_radians(angle_degrees);
 
     let cos_angle = angle_rad.cos();
     let sin_angle = angle_rad.sin();
@@ -124,7 +124,7 @@ impl Arc {
       y: 0.5 * (p2.y - p1.y),
     };
 
-    let angle = degrees_to_radians(angle_degrees % 360.0);
+    let angle = GeometryUtils::degrees_to_radians(angle_degrees % 360.0);
     let cos_angle = angle.cos();
     let sin_angle = angle.sin();
 
@@ -169,7 +169,7 @@ impl Arc {
     let p = ux;
     let sign_theta = if uy < 0.0 { -1.0 } else { 1.0 };
     let mut theta = sign_theta * (p / n).acos();
-    theta = radians_to_degrees(theta);
+    theta = GeometryUtils::radians_to_degrees(theta);
 
     // Compute the sweep (extent) angle.
     let vx = (-x1 - cx1) / rx;
@@ -178,7 +178,7 @@ impl Arc {
     let p2_val = ux * vx + uy * vy;
     let sign_delta = if (ux * vy - uy * vx) < 0.0 { -1.0 } else { 1.0 };
     let mut delta = sign_delta * (p2_val / n2).acos();
-    delta = radians_to_degrees(delta);
+    delta = GeometryUtils::radians_to_degrees(delta);
 
     if sweep && delta > 0.0 {
       delta -= 360.0;

@@ -1,12 +1,10 @@
-use crate::constants::{DEFAULT_CURVE_TOLERANCE, DEFAULT_TOLERANCE};
-use deepnest_types::{Point, Polygon, Rect, Vector};
+use deepnest_types::Point;
 use derive_more::{From, Into};
 use napi::bindgen_prelude::*;
 use std::collections::VecDeque;
 
 use crate::geometryutils::{degrees_to_radians, radians_to_degrees, GeometryUtils};
 
-use std::f64::consts::PI;
 
 #[derive(Debug, Clone, Copy, From, Into)]
 #[napi]

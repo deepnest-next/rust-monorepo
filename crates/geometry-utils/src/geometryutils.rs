@@ -1,8 +1,7 @@
 use crate::constants::DEFAULT_TOLERANCE;
-use deepnest_types::{Point, Polygon, Rect, Vector};
+use deepnest_types::{Point, Rect};
 use napi::bindgen_prelude::*;
 use derive_more::{From, Into};
-use std::collections::VecDeque;
 
 #[derive(Debug, Clone, Copy, From, Into)]
 #[napi]

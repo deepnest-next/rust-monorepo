@@ -5,7 +5,6 @@ pub mod cubic_bezier;
 
 #[macro_use]
 extern crate napi_derive;
-use napi::bindgen_prelude::*;
 
 pub mod constants;
 pub mod geometryutils;

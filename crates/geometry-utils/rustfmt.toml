@@ -1,2 +1,13 @@
 tab_spaces = 2
 edition = "2021"
+
+group_imports = "StdExternalCrate"
+fn_args_layout = "Vertical"
+array_layout = "Block"
+control_style = "Rfc"
+where_style = "Rfc"
+generics_indent = "Block"
+fn_call_style = "Block"
+force_multiline_blocks = true
+imports_layout = "Vertical"
+imports_granularity = "Crate"

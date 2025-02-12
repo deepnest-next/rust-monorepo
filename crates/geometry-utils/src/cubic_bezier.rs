@@ -1,5 +1,5 @@
-use crate::constants::{DEFAULT_CURVE_TOLERANCE,DEFAULT_TOLERANCE};
-use deepnest_types::{Point, Polygon, Rect, Vector};
+use crate::constants::DEFAULT_CURVE_TOLERANCE;
+use deepnest_types::Point;
 use derive_more::{From, Into};
 use napi::bindgen_prelude::*;
 use std::collections::VecDeque;

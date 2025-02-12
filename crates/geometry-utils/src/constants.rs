@@ -1,4 +1,3 @@
-use napi::bindgen_prelude::*;
 #[napi]
 pub const DEFAULT_TOLERANCE: f64 = 1e-9;
 

@@ -9,7 +9,6 @@ license.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-# Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
 napi = { workspace = true, optional = true }
 napi-derive = { workspace = true, optional = true }
 derive_more.workspace = true

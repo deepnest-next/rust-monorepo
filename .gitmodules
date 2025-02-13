@@ -1,6 +1,3 @@
-[submodule "crates/node-clipper2"]
-	path = crates/node-clipper2
-	url = git@github.com:deepnest-next/node-clipper2.git
 [submodule "crates/node-svg-preprocessor"]
 	path = crates/node-svg-preprocessor
 	url = git@github.com:deepnest-next/node-svg-preprocessor.git

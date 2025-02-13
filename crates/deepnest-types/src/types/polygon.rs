@@ -1,9 +1,9 @@
 use derive_more::{From, Into};
 
-use crate::point::Point;
+use crate::types::point::Point;
 
 /// Polygon
-#[cfg_attr(feature = "node", napi(object, namespace = "Polygon"))]
+#[cfg_attr(feature = "node", napi(object))]
 #[derive(Debug, Clone, From, Into)]
 pub struct Polygon {
   pub points: Vec<Point>,
@@ -12,7 +12,7 @@ pub struct Polygon {
   pub offsety:Option<f64>,
 }
 
-#[cfg_attr(feature = "node", napi(namespace = "Polygon"))]
+#[cfg_attr(feature = "node", napi)]
 pub fn polygon_area(polygon: Polygon) -> f64 {
   let n = polygon.points.len();
   if n < 3 {

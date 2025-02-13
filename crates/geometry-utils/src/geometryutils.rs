@@ -1,5 +1,5 @@
 use crate::constants::DEFAULT_TOLERANCE;
-use deepnest_types::{Point, Polygon, Rect};
+use deepnest_types::types::{Point, Polygon, Rect};
 use derive_more::{From, Into};
 // this is preventive for {isize,f64}.rem_euclid(rhs)
 #[allow(unused_imports)]
@@ -494,29 +494,29 @@ impl GeometryUtils {
   /// # Example
   ///
   /// ```
-  /// # #[derive(Debug, Clone, Copy, PartialEq)]
-  /// # pub struct Point { pub x: f64, pub y: f64 }
-  /// # fn no_fit_polygon_rectangle(a: &[Point], b: &[Point]) -> Option<Vec<Vec<Point>>> { /* ... */ }
-  ///
-  /// let rect_a = [
-  ///     Point { x: 0.0, y: 0.0 },
-  ///     Point { x: 10.0, y: 0.0 },
-  ///     Point { x: 10.0, y: 5.0 },
-  ///     Point { x: 0.0, y: 5.0 },
-  /// ];
-  ///
-  /// let poly_b = [
-  ///     Point { x: 2.0, y: 1.0 },
-  ///     Point { x: 4.0, y: 1.0 },
-  ///     Point { x: 4.0, y: 3.0 },
-  ///     Point { x: 2.0, y: 3.0 },
-  /// ];
-  ///
-  /// if let Some(nfp) = no_fit_polygon_rectangle(&rect_a, &poly_b) {
-  ///     println!("Interior NFP: {:?}", nfp);
-  /// } else {
-  ///     println!("No valid NFP; polygon B is too large.");
-  /// }
+  /// // # #[derive(Debug, Clone, Copy, PartialEq)]
+  /// // # pub struct Point { pub x: f64, pub y: f64 }
+  /// // # fn no_fit_polygon_rectangle(a: &[Point], b: &[Point]) -> Option<Vec<Vec<Point>>> { \/* ... *\/ }
+  /// //
+  /// // let rect_a = [
+  /// //     Point { x: 0.0, y: 0.0 },
+  /// //     Point { x: 10.0, y: 0.0 },
+  /// //     Point { x: 10.0, y: 5.0 },
+  /// //     Point { x: 0.0, y: 5.0 },
+  /// // ];
+  /// //
+  /// // let poly_b = [
+  /// //     Point { x: 2.0, y: 1.0 },
+  /// //     Point { x: 4.0, y: 1.0 },
+  /// //     Point { x: 4.0, y: 3.0 },
+  /// //     Point { x: 2.0, y: 3.0 },
+  /// // ];
+  /// //
+  /// // if let Some(nfp) = no_fit_polygon_rectangle(&rect_a, &poly_b) {
+  /// //     println!("Interior NFP: {:?}", nfp);
+  /// // } else {
+  /// //     println!("No valid NFP; polygon B is too large.");
+  /// // }
   /// ```
   #[napi]
   pub fn no_fit_polygon_rectangle(

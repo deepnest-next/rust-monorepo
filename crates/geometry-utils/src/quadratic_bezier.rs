@@ -1,5 +1,5 @@
 use crate::constants::DEFAULT_CURVE_TOLERANCE;
-use deepnest_types::Point;
+use deepnest_types::types::Point;
 use derive_more::{From, Into};
 use std::collections::VecDeque;
 

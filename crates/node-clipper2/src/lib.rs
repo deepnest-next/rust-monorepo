@@ -136,8 +136,8 @@ impl Clipper {
     let mut path_a = Paths64::new(&vec![]);
     for p in path {
       let mut path_b = Path64::new(&vec![]);
-      for p in p {
-        path_b.add_point(Point64::new(p.x, p.y));
+      for np in p {
+        path_b.add_point(Point64::new(np.x, np.y));
       }
       path_a.add_path(path_b);
     }
@@ -207,8 +207,8 @@ impl ClipperFloat64 {
     let mut path_a = PathsD::new(&vec![]);
     for p in path {
       let mut path_b = PathD::new(&vec![]);
-      for p in p {
-        path_b.add_point(PointD::new(p.x, p.y));
+      for np in p {
+        path_b.add_point(PointD::new(np.x, np.y));
       }
       path_a.add_path(path_b);
     }

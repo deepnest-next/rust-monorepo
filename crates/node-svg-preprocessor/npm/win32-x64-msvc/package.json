@@ -1,0 +1,22 @@
+{
+  "name": "@deepnest/svg-preprocessor-win32-x64-msvc",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepnest-next/node-svg-preprocessor"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "main": "svg-preprocessor.win32-x64-msvc.node",
+  "files": [
+    "svg-preprocessor.win32-x64-msvc.node"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">= 10"
+  }
+}

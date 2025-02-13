@@ -1,0 +1,18 @@
+[package]
+name = "deepnest_svg-preprocessor"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
+napi.workspace = true
+napi-derive.workspace = true
+usvg.workspace = true
+
+[build-dependencies]
+napi-build.workspace = true

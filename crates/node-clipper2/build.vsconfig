@@ -1,0 +1,79 @@
+{
+  "version": "1.0",
+  "components": [
+    '--add Microsoft.VisualStudio.Component.CoreEditor ' +
+    '--add Microsoft.VisualStudio.Workload.CoreEditor ' +
+    '--add Microsoft.Net.Component.4.8.SDK ' +
+    '--add Microsoft.Net.Component.4.7.2.TargetingPack ' +
+    '--add Microsoft.Net.ComponentGroup.DevelopmentPrerequisites ' +
+    '--add Microsoft.VisualStudio.Component.TypeScript.TSServer ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.WebToolsExtensions ' +
+    '--add Microsoft.VisualStudio.Component.JavaScript.TypeScript ' +
+    '--add Microsoft.VisualStudio.Component.Roslyn.Compiler ' +
+    '--add Microsoft.Component.MSBuild ' +
+    '--add Microsoft.VisualStudio.Component.Roslyn.LanguageServices ' +
+    '--add Microsoft.VisualStudio.Component.TextTemplating ' +
+    '--add Microsoft.VisualStudio.Component.NuGet ' +
+    '--add Microsoft.VisualStudio.Component.SQL.CLR ' +
+    '--add Microsoft.Component.ClickOnce ' +
+    '--add Microsoft.VisualStudio.Component.ManagedDesktop.Core ' +
+    '--add Microsoft.NetCore.Component.Runtime.9.0 ' +
+    '--add Microsoft.NetCore.Component.Runtime.8.0 ' +
+    '--add Microsoft.NetCore.Component.SDK ' +
+    '--add Microsoft.VisualStudio.Component.AppInsights.Tools ' +
+    '--add Microsoft.VisualStudio.Component.DiagnosticTools ' +
+    '--add Microsoft.VisualStudio.Component.Debugger.JustInTime ' +
+    '--add Component.Microsoft.VisualStudio.LiveShare.2022 ' +
+    '--add Microsoft.VisualStudio.Component.IntelliCode ' +
+    '--add Microsoft.NetCore.Component.Runtime.6.0 ' +
+    '--add Microsoft.VisualStudio.Component.VC.CoreIde ' +
+    '--add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 ' +
+    '--add Microsoft.VisualStudio.Component.Graphics.Tools ' +
+    '--add Microsoft.VisualStudio.Component.VC.DiagnosticTools ' +
+    '--add Microsoft.VisualStudio.Component.Windows11SDK.22621 ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.MSIX.Packaging ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.WindowsAppSDK.Cs ' +
+    '--add Microsoft.VisualStudio.Component.VC.ATL ' +
+    '--add Microsoft.VisualStudio.Component.VC.ATLMFC ' +
+    '--add Microsoft.VisualStudio.Component.VC.Redist.14.Latest ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core ' +
+    '--add Microsoft.VisualStudio.Component.Windows11Sdk.WindowsPerformanceToolkit ' +
+    '--add Microsoft.VisualStudio.Component.CppBuildInsights ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.WebToolsExtensions.CMake ' +
+    '--add Microsoft.VisualStudio.Component.VC.CMake.Project ' +
+    '--add Microsoft.VisualStudio.Component.VC.TestAdapterForBoostTest ' +
+    '--add Microsoft.VisualStudio.Component.VC.TestAdapterForGoogleTest ' +
+    '--add Microsoft.VisualStudio.Component.VC.ASAN ' +
+    '--add Microsoft.VisualStudio.Component.Vcpkg ' +
+    '--add Microsoft.VisualStudio.Component.VC.CLI.Support ' +
+    '--add Microsoft.VisualStudio.Component.VC.Llvm.ClangToolset ' +
+    '--add Microsoft.VisualStudio.Component.VC.Llvm.Clang ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Llvm.Clang ' +
+    '--add Microsoft.VisualStudio.Component.Windows11SDK.26100 ' +
+    '--add Microsoft.VisualStudio.Component.Windows11SDK.22000 ' +
+    '--add Microsoft.Component.NetFX.Native ' +
+    '--add Microsoft.VisualStudio.Component.Graphics ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.UWP.Xamarin ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.UWP.Support ' +
+    '--add Microsoft.VisualStudio.Component.VC.Tools.ARM64EC ' +
+    '--add Microsoft.VisualStudio.Component.UWP.VC.ARM64EC ' +
+    '--add Microsoft.VisualStudio.Component.VC.Tools.ARM64 ' +
+    '--add Microsoft.VisualStudio.Component.UWP.VC.ARM64 ' +
+    '--add Microsoft.VisualStudio.Component.VC.Tools.ARM ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.UWP.VC ' +
+    '--add Microsoft.VisualStudio.Workload.NativeDesktop ' +
+    '--add Microsoft.VisualStudio.Component.WindowsAppSdkSupport.CSharp ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.WindowsAppDevelopment.Prerequisites ' +
+    '--add Microsoft.VisualStudio.ComponentGroup.UWP.NetCoreAndStandard ' +
+    '--add Microsoft.VisualStudio.Workload.Universal ' +
+    '--add Microsoft.VisualStudio.Component.VC.ATL.ARM ' +
+    '--add Microsoft.VisualStudio.Component.VC.ATL.ARM64 ' +
+    '--add Microsoft.VisualStudio.Component.VC.MFC.ARM ' +
+    '--add Microsoft.Net.Component.4.6.1.TargetingPack ' +
+    '--add Microsoft.VisualStudio.Component.VC.14.42.17.12.ARM ' +
+    '--add Microsoft.VisualStudio.Component.VC.14.42.17.12.ARM64 ' +
+    '--add Microsoft.VisualStudio.Component.VC.14.42.17.12.x86.x64 ' +
+    '--add Microsoft.VisualStudio.Component.VC.14.42.17.12.CLI.Support '
+  ],
+  "extensions": []
+}

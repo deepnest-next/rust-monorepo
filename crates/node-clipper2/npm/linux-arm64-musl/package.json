@@ -1,0 +1,38 @@
+{
+  "name": "@deepnest/clipper2-linux-arm64-musl",
+  "version": "0.0.0",
+  "os": [
+    "linux"
+  ],
+  "cpu": [
+    "arm64"
+  ],
+  "main": "clipper2.linux-arm64-musl.node",
+  "files": [
+    "clipper2.linux-arm64-musl.node"
+  ],
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">= 10"
+  },
+  "libc": [
+    "musl"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "bugs": {
+    "url": "https://github.com/deepnest-next/node-clipper2/issues"
+  },
+  "homepage": "https://www.deepnest.net",
+  "funding": [
+    {
+      "type": "patreon",
+      "url": "https://patreon.com/deepnest_next"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/deepnest-next/node-clipper2.git"
+  }
+}

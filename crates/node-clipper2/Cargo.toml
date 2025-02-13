@@ -1,0 +1,19 @@
+[package]
+name = "deepnest_clipper2"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
+napi.workspace = true
+napi-derive.workspace = true
+clipper2-sys = { git = "https://github.com/songhuaixu/clipper2-sys", branch = "master" }
+#geo = "0.29.3"
+
+[build-dependencies]
+napi-build.workspace = true

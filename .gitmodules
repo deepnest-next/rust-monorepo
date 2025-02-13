@@ -1,3 +1,0 @@
-[submodule "crates/node-svg-preprocessor"]
-	path = crates/node-svg-preprocessor
-	url = git@github.com:deepnest-next/node-svg-preprocessor.git

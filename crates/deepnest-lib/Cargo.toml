@@ -6,3 +6,9 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
+deepnest-types = { path = "../deepnest-types" }
+
+[features]
+default = []
+node = ["deepnest-types/node"]
+traits = ["deepnest-types/traits"]

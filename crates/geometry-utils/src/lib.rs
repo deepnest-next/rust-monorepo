@@ -1,12 +1,9 @@
-pub mod arc;
-pub mod cubic_bezier;
-
-// lib.rs
-
 #[macro_use]
 extern crate napi_derive;
 
+pub mod arc;
 pub mod constants;
+pub mod cubic_bezier;
 pub mod geometryutils;
 pub mod quadratic_bezier;
 pub use crate::geometryutils::*;

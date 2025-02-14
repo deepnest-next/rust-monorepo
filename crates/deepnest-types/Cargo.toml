@@ -13,6 +13,8 @@ napi = { workspace = true, optional = true }
 napi-derive = { workspace = true, optional = true }
 delegate.workspace = true
 derive_more.workspace = true
+deepnest_clipper2 = { path = "../node-clipper2", optional = true}
+clipper2-sys = { git = "https://github.com/songhuaixu/clipper2-sys", branch = "master", optional = true}
 
 [build-dependencies]
 napi-build = { workspace = true, optional = true }
@@ -20,3 +22,4 @@ napi-build = { workspace = true, optional = true }
 [features]
 default = []
 node = ["napi", "napi-build", "napi-derive"]
+traits = ["deepnest_clipper2", "clipper2-sys"]

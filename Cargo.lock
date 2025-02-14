@@ -201,11 +201,16 @@ checksum = "5c297a1c74b71ae29df00c3e22dd9534821d60eb9af5a0192823fa2acea70c2a"
 [[package]]
 name = "deepnest-lib"
 version = "0.100.0"
+dependencies = [
+ "deepnest-types",
+]
 
 [[package]]
 name = "deepnest-types"
 version = "0.100.0"
 dependencies = [
+ "clipper2-sys",
+ "deepnest_clipper2",
  "delegate",
  "derive_more",
  "napi",

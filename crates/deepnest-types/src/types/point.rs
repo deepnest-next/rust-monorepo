@@ -1,5 +1,4 @@
 use derive_more::{From, Into};
-use std::cmp::Ordering;
 
 /// Point
 #[cfg_attr(feature = "node", napi(object))]

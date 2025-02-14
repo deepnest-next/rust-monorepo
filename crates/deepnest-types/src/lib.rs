@@ -5,3 +5,5 @@ use napi::bindgen_prelude::*;
 #[macro_use]
 extern crate napi_derive;
 pub mod types;
+#[cfg(feature = "traits")]
+pub mod traits;

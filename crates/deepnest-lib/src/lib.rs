@@ -1,3 +1,4 @@
+pub mod nfp;
 #[cfg(feature = "traits")]
 pub use ::deepnest_types::traits;
 pub use ::deepnest_types::types;

@@ -1,0 +1,3 @@
+[submodule "crates/babushka"]
+	path = crates/babushka
+	url = https://github.com/deepnest-next/rust-babushka-nfp.git

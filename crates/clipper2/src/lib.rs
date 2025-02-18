@@ -1,3 +1,4 @@
+pub mod clipper_v1;
 pub mod core;
 pub use core::*;
 

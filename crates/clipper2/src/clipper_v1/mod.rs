@@ -1381,6 +1381,100 @@ impl Clipper {
         }
         out_rec
     }
+
+    /// Appends one polygon to another.
+    fn append_polygon(&mut self, e1: &Rc<RefCell<TEdge>>, e2: &Rc<RefCell<TEdge>>) {
+        let out_rec1 = self.get_out_rec(e1.borrow().out_idx);
+        let out_rec2 = self.get_out_rec(e2.borrow().out_idx);
+
+        let hole_state_rec = if self.out_rec1_right_of_out_rec2(&out_rec1, &out_rec2) {
+            out_rec2.clone()
+        } else if self.out_rec1_right_of_out_rec2(&out_rec2, &out_rec1) {
+            out_rec1.clone()
+        } else {
+            self.get_lowermost_rec(&out_rec1, &out_rec2)
+        };
+
+        let p1_lft = out_rec1.borrow().pts.as_ref().unwrap().clone();
+        let p1_rt = p1_lft.borrow().prev.as_ref().unwrap().clone();
+        let p2_lft = out_rec2.borrow().pts.as_ref().unwrap().clone();
+        let p2_rt = p2_lft.borrow().prev.as_ref().unwrap().clone();
+
+        if e1.borrow().side == EdgeSide::Left {
+            if e2.borrow().side == EdgeSide::Left {
+                self.reverse_poly_pt_links(&p2_lft);
+                p2_lft.borrow_mut().next = Some(p1_lft.clone());
+                p1_lft.borrow_mut().prev = Some(p2_lft.clone());
+                p1_rt.borrow_mut().next = Some(p2_rt.clone());
+                p2_rt.borrow_mut().prev = Some(p1_rt.clone());
+                out_rec1.borrow_mut().pts = Some(p2_rt.clone());
+            } else {
+                p2_rt.borrow_mut().next = Some(p1_lft.clone());
+                p1_lft.borrow_mut().prev = Some(p2_rt.clone());
+                p2_lft.borrow_mut().prev = Some(p1_rt.clone());
+                p1_rt.borrow_mut().next = Some(p2_lft.clone());
+                out_rec1.borrow_mut().pts = Some(p2_lft.clone());
+            }
+        } else {
+            if e2.borrow().side == EdgeSide::Right {
+                self.reverse_poly_pt_links(&p2_lft);
+                p1_rt.borrow_mut().next = Some(p2_rt.clone());
+                p2_rt.borrow_mut().prev = Some(p1_rt.clone());
+                p2_lft.borrow_mut().next = Some(p1_lft.clone());
+                p1_lft.borrow_mut().prev = Some(p2_lft.clone());
+            } else {
+                p1_rt.borrow_mut().next = Some(p2_lft.clone());
+                p2_lft.borrow_mut().prev = Some(p1_rt.clone());
+                p1_lft.borrow_mut().prev = Some(p2_rt.clone());
+                p2_rt.borrow_mut().next = Some(p1_lft.clone());
+            }
+        }
+
+        out_rec1.borrow_mut().bottom_pt = None;
+        if Rc::ptr_eq(&hole_state_rec, &out_rec2) {
+            if !Rc::ptr_eq(&out_rec2.borrow().first_left.as_ref().unwrap(), &out_rec1) {
+                out_rec1.borrow_mut().first_left = out_rec2.borrow().first_left.clone();
+            }
+            out_rec1.borrow_mut().is_hole = out_rec2.borrow().is_hole;
+        }
+        out_rec2.borrow_mut().pts = None;
+        out_rec2.borrow_mut().bottom_pt = None;
+        out_rec2.borrow_mut().first_left = Some(out_rec1.clone());
+
+        let ok_idx = e1.borrow().out_idx;
+        let obsolete_idx = e2.borrow().out_idx;
+
+        e1.borrow_mut().out_idx = UNASSIGNED;
+        e2.borrow_mut().out_idx = UNASSIGNED;
+
+        let mut e = self.base.active_edges.clone();
+        while let Some(ref e_ref) = e {
+            if e_ref.borrow().out_idx == obsolete_idx {
+                e_ref.borrow_mut().out_idx = ok_idx;
+                e_ref.borrow_mut().side = e1.borrow().side;
+                break;
+            }
+            e = e_ref.borrow().next_in_ael.clone();
+        }
+        out_rec2.borrow_mut().idx = out_rec1.borrow().idx;
+    }
+
+    /// Reverses the links of a polygon.
+    fn reverse_poly_pt_links(&self, pp: &Rc<RefCell<OutPt>>) {
+        if pp.is_none() {
+            return;
+        }
+        let mut pp1 = pp.clone();
+        loop {
+            let pp2 = pp1.borrow().next.clone().unwrap();
+            pp1.borrow_mut().next = pp1.borrow().prev.clone();
+            pp1.borrow_mut().prev = Some(pp2.clone());
+            pp1 = pp2;
+            if Rc::ptr_eq(&pp1, pp) {
+                break;
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

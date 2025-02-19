@@ -2323,6 +2323,95 @@ impl Clipper {
             out_rec.pts = None;
         }
     }
+
+    /// Fixes up the output polygon by removing duplicate points and simplifying consecutive parallel edges.
+    fn fixup_out_polygon(&mut self, out_rec: &mut OutRec) {
+        let mut last_ok: Option<Rc<RefCell<OutPt>>> = None;
+        out_rec.bottom_pt = None;
+        let mut pp = out_rec.pts.as_ref().unwrap().clone();
+        let preserve_col = self.base.preserve_collinear || self.strictly_simple;
+
+        loop {
+            if Rc::ptr_eq(&pp, &pp.borrow().prev.as_ref().unwrap()) || Rc::ptr_eq(&pp.borrow().prev.as_ref().unwrap(), &pp.borrow().next.as_ref().unwrap()) {
+                out_rec.pts = None;
+                return;
+            }
+
+            if pp.borrow().pt == pp.borrow().next.as_ref().unwrap().borrow().pt
+                || pp.borrow().pt == pp.borrow().prev.as_ref().unwrap().borrow().pt
+                || (ClipperBase::slopes_equal_points(
+                    pp.borrow().prev.as_ref().unwrap().borrow().pt,
+                    pp.borrow().pt,
+                    pp.borrow().next.as_ref().unwrap().borrow().pt,
+                    self.base.use_full_range,
+                ) && (!preserve_col
+                    || !self.base.pt2_is_between_pt1_and_pt3(
+                        pp.borrow().prev.as_ref().unwrap().borrow().pt,
+                        pp.borrow().pt,
+                        pp.borrow().next.as_ref().unwrap().borrow().pt,
+                    )))
+            {
+                last_ok = None;
+                pp.borrow().prev.as_ref().unwrap().borrow_mut().next = pp.borrow().next.clone();
+                pp.borrow().next.as_ref().unwrap().borrow_mut().prev = pp.borrow().prev.clone();
+                pp = pp.borrow().prev.as_ref().unwrap().clone();
+            } else if Some(pp.clone()) == last_ok {
+                break;
+            } else {
+                if last_ok.is_none() {
+                    last_ok = Some(pp.clone());
+                }
+                pp = pp.borrow().next.as_ref().unwrap().clone();
+            }
+        }
+        out_rec.pts = Some(pp);
+    }
+
+    /// Duplicates an output point.
+    fn dup_out_pt(&self, out_pt: &Rc<RefCell<OutPt>>, insert_after: bool) -> Rc<RefCell<OutPt>> {
+        let result = Rc::new(RefCell::new(OutPt {
+            pt: out_pt.borrow().pt,
+            idx: out_pt.borrow().idx,
+            next: None,
+            prev: None,
+        }));
+
+        if insert_after {
+            result.borrow_mut().next = out_pt.borrow().next.clone();
+            result.borrow_mut().prev = Some(out_pt.clone());
+            out_pt.borrow().next.as_ref().unwrap().borrow_mut().prev = Some(result.clone());
+            out_pt.borrow_mut().next = Some(result.clone());
+        } else {
+            result.borrow_mut().prev = out_pt.borrow().prev.clone();
+            result.borrow_mut().next = Some(out_pt.clone());
+            out_pt.borrow().prev.as_ref().unwrap().borrow_mut().next = Some(result.clone());
+            out_pt.borrow_mut().prev = Some(result.clone());
+        }
+
+        result
+    }
+
+    /// Gets the overlap between two ranges.
+    fn get_overlap(a1: CInt, a2: CInt, b1: CInt, b2: CInt, left: &mut CInt, right: &mut CInt) -> bool {
+        if a1 < a2 {
+            if b1 < b2 {
+                *left = a1.max(b1);
+                *right = a2.min(b2);
+            } else {
+                *left = a1.max(b2);
+                *right = a2.min(b1);
+            }
+        } else {
+            if b1 < b2 {
+                *left = a2.max(b1);
+                *right = a1.min(b2);
+            } else {
+                *left = a2.max(b2);
+                *right = a1.min(b1);
+            }
+        }
+        *left < *right
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

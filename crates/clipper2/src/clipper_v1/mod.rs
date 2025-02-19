@@ -1219,6 +1219,52 @@ impl Clipper {
     fn swap_points(pt1: &mut IntPoint, pt2: &mut IntPoint) {
         std::mem::swap(pt1, pt2);
     }
+
+    /// Determines if two horizontal segments overlap.
+    fn horz_segments_overlap(&self, seg1a: CInt, seg1b: CInt, seg2a: CInt, seg2b: CInt) -> bool {
+        let (mut seg1a, mut seg1b) = (seg1a, seg1b);
+        let (mut seg2a, mut seg2b) = (seg2a, seg2b);
+        if seg1a > seg1b {
+            ClipperBase::swap(&mut seg1a, &mut seg1b);
+        }
+        if seg2a > seg2b {
+            ClipperBase::swap(&mut seg2a, &mut seg2b);
+        }
+        seg1a < seg2b && seg2a < seg1b
+    }
+
+    /// Sets the hole state for an output record.
+    fn set_hole_state(&mut self, e: &Rc<RefCell<TEdge>>, out_rec: &mut OutRec) {
+        let mut e2 = e.borrow().prev_in_ael.clone();
+        let mut e_tmp: Option<Rc<RefCell<TEdge>>> = None;
+        while let Some(ref e2_ref) = e2 {
+            if e2_ref.borrow().out_idx >= 0 && e2_ref.borrow().wind_delta != 0 {
+                if e_tmp.is_none() {
+                    e_tmp = Some(e2_ref.clone());
+                } else if e_tmp.as_ref().unwrap().borrow().out_idx == e2_ref.borrow().out_idx {
+                    e_tmp = None; // paired
+                }
+            }
+            e2 = e2_ref.borrow().prev_in_ael.clone();
+        }
+
+        if let Some(e_tmp) = e_tmp {
+            out_rec.first_left = Some(self.base.poly_outs[e_tmp.borrow().out_idx as usize].clone());
+            out_rec.is_hole = !out_rec.first_left.as_ref().unwrap().borrow().is_hole;
+        } else {
+            out_rec.first_left = None;
+            out_rec.is_hole = false;
+        }
+    }
+
+    /// Calculates the slope (dx) between two points.
+    fn get_dx(pt1: IntPoint, pt2: IntPoint) -> f64 {
+        if pt1.y == pt2.y {
+            HORIZONTAL
+        } else {
+            (pt2.x - pt1.x) as f64 / (pt2.y - pt1.y) as f64
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

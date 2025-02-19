@@ -3882,9 +3882,63 @@ impl ClipperOffset {
     ///
     /// This method should translate the logic from the original C# AddPaths method,
     /// which processes input polygon paths and stores them for offsetting.
-    pub fn add_paths(&mut self, _paths: &Paths, _join_type: JoinType, _end_type: EndType) {
-        // TODO: Implement the logic to add multiple paths for offsetting.
-        unimplemented!("Implement add_paths for ClipperOffset")
+    pub fn add_paths(&mut self, paths: &Paths, join_type: JoinType, end_type: EndType) {
+        for path in paths {
+            self.add_path(path, join_type, end_type);
+        }
+    }
+
+    pub fn add_path(&mut self, path: &Path, join_type: JoinType, end_type: EndType) {
+        let mut high_i = path.len() as isize - 1;
+        if high_i < 0 {
+            return;
+        }
+        let mut new_node = PolyNode::new();
+        new_node.jointype = join_type;
+        new_node.endtype = end_type;
+
+        // Strip duplicate points from path and also get index to the lowest point ...
+        if end_type == EndType::ClosedLine || end_type == EndType::ClosedPolygon {
+            while high_i > 0 && path[0] == path[high_i as usize] {
+                high_i -= 1;
+            }
+        }
+        new_node.polygon.reserve((high_i + 1) as usize);
+        new_node.polygon.push(path[0]);
+        let mut j = 0;
+        let mut k = 0;
+        for i in 1..=high_i as usize {
+            if new_node.polygon[j] != path[i] {
+                j += 1;
+                new_node.polygon.push(path[i]);
+                if path[i].y > new_node.polygon[k].y
+                    || (path[i].y == new_node.polygon[k].y && path[i].x < new_node.polygon[k].x)
+                {
+                    k = j;
+                }
+            }
+        }
+        if end_type == EndType::ClosedPolygon && j < 2 {
+            return;
+        }
+
+        self.poly_nodes.add_child(new_node);
+
+        // If this path's lowest pt is lower than all the others then update self.lowest
+        if end_type != EndType::ClosedPolygon {
+            return;
+        }
+        if self.lowest.is_none() {
+            self.lowest = Some(IntPoint::new(self.poly_nodes.child_count() as i64 - 1, k as i64));
+        } else {
+            let ip = self.poly_nodes.childs[self.lowest.unwrap().x as usize].polygon
+                [self.lowest.unwrap().y as usize];
+            if new_node.polygon[k].y > ip.y
+                || (new_node.polygon[k].y == ip.y && new_node.polygon[k].x < ip.x)
+            {
+                self.lowest = Some(IntPoint::new(self.poly_nodes.child_count() as i64 - 1, k as i64));
+            }
+        }
     }
 
     /// Executes the offsetting operation.

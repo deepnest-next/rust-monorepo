@@ -2226,6 +2226,57 @@ impl Clipper {
             panic!("DoMaxima error");
         }
     }
+
+    /// Reverses the paths in the given vector of paths.
+    pub fn reverse_paths(polys: &mut Paths) {
+        for poly in polys.iter_mut() {
+            poly.reverse();
+        }
+    }
+
+    /// Determines the orientation of a path.
+    pub fn orientation(poly: &Path) -> bool {
+        Self::area(poly) >= 0.0
+    }
+
+    /// Counts the number of points in an OutPt circular linked list.
+    fn point_count(pts: &OutPt) -> usize {
+        if pts.is_none() {
+            return 0;
+        }
+        let mut result = 0;
+        let mut p = pts.clone();
+        loop {
+            result += 1;
+            p = p.borrow().next.as_ref().unwrap().clone();
+            if Rc::ptr_eq(&p, &pts) {
+                break;
+            }
+        }
+        result
+    }
+
+    /// Builds the result paths from the internal OutRec structures.
+    fn build_result(&mut self, polyg: &mut Paths) {
+        polyg.clear();
+        polyg.reserve(self.base.poly_outs.len());
+        for out_rec in &self.base.poly_outs {
+            if let Some(ref pts) = out_rec.pts {
+                let p = pts.borrow().prev.as_ref().unwrap().clone();
+                let cnt = Self::point_count(&p.borrow());
+                if cnt < 2 {
+                    continue;
+                }
+                let mut pg = Path::with_capacity(cnt);
+                let mut p = p.clone();
+                for _ in 0..cnt {
+                    pg.push(p.borrow().pt);
+                    p = p.borrow().prev.as_ref().unwrap().clone();
+                }
+                polyg.push(pg);
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

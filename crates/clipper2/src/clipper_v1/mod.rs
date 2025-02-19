@@ -2930,6 +2930,75 @@ impl Clipper {
             }
         }
     }
+
+    fn update_out_pt_idxs(&self, out_rec: &OutRec) {
+        let mut op = out_rec.pts.as_ref().unwrap().clone();
+        loop {
+            op.borrow_mut().idx = out_rec.idx;
+            op = op.borrow().prev.as_ref().unwrap().clone();
+            if Rc::ptr_eq(&op, out_rec.pts.as_ref().unwrap()) {
+                break;
+            }
+        }
+    }
+
+    fn do_simple_polygons(&mut self) {
+        let mut i = 0;
+        while i < self.base.poly_outs.len() {
+            let out_rec = self.base.poly_outs[i].clone();
+            i += 1;
+            let mut op = out_rec.pts.as_ref().unwrap().clone();
+            if op.is_none() || out_rec.is_open {
+                continue;
+            }
+            loop {
+                let mut op2 = op.borrow().next.as_ref().unwrap().clone();
+                while !Rc::ptr_eq(&op2, out_rec.pts.as_ref().unwrap()) {
+                    if op.borrow().pt == op2.borrow().pt && !Rc::ptr_eq(&op2.borrow().next.as_ref().unwrap(), &op) && !Rc::ptr_eq(&op2.borrow().prev.as_ref().unwrap(), &op) {
+                        let op3 = op.borrow().prev.as_ref().unwrap().clone();
+                        let op4 = op2.borrow().prev.as_ref().unwrap().clone();
+                        op.borrow_mut().prev = Some(op4.clone());
+                        op4.borrow_mut().next = Some(op.clone());
+                        op2.borrow_mut().prev = Some(op3.clone());
+                        op3.borrow_mut().next = Some(op2.clone());
+
+                        out_rec.pts = Some(op.clone());
+                        let mut out_rec2 = self.base.create_out_rec();
+                        out_rec2.pts = Some(op2.clone());
+                        self.update_out_pt_idxs(&out_rec2);
+                        if Clipper::poly2_contains_poly1(out_rec2.pts.as_ref().unwrap(), out_rec.pts.as_ref().unwrap()) {
+                            out_rec2.is_hole = !out_rec.is_hole;
+                            out_rec2.first_left = Some(out_rec.clone());
+                            if self.using_poly_tree {
+                                self.fixup_first_lefts2(&out_rec2, &out_rec);
+                            }
+                        } else if Clipper::poly2_contains_poly1(out_rec.pts.as_ref().unwrap(), out_rec2.pts.as_ref().unwrap()) {
+                            out_rec2.is_hole = out_rec.is_hole;
+                            out_rec.is_hole = !out_rec2.is_hole;
+                            out_rec2.first_left = out_rec.first_left.clone();
+                            out_rec.first_left = Some(out_rec2.clone());
+                            if self.using_poly_tree {
+                                self.fixup_first_lefts2(&out_rec, &out_rec2);
+                            }
+                        } else {
+                            out_rec2.is_hole = out_rec.is_hole;
+                            out_rec2.first_left = out_rec.first_left.clone();
+                            if self.using_poly_tree {
+                                self.fixup_first_lefts1(&out_rec, &out_rec2);
+                            }
+                        }
+                        op2 = op.clone();
+                    }
+                    op2 = op2.borrow().next.as_ref().unwrap().clone();
+                }
+                op = op.borrow().next.as_ref().unwrap().clone();
+                if Rc::ptr_eq(&op, out_rec.pts.as_ref().unwrap()) {
+                    break;
+                }
+            }
+        }
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -1489,6 +1489,159 @@ impl Clipper {
         edge1.borrow_mut().out_idx = edge2.borrow().out_idx;
         edge2.borrow_mut().out_idx = out_idx;
     }
+
+    /// Intersects two edges at a given point.
+    fn intersect_edges(&mut self, e1: &Rc<RefCell<TEdge>>, e2: &Rc<RefCell<TEdge>>, pt: IntPoint) {
+        let e1_contributing = e1.borrow().out_idx >= 0;
+        let e2_contributing = e2.borrow().out_idx >= 0;
+
+        // Handle open paths
+        if e1.borrow().wind_delta == 0 || e2.borrow().wind_delta == 0 {
+            if e1.borrow().wind_delta == 0 && e2.borrow().wind_delta == 0 {
+                return;
+            } else if e1.borrow().poly_typ == e2.borrow().poly_typ && e1.borrow().wind_delta != e2.borrow().wind_delta && self.clip_type == ClipType::Union {
+                if e1.borrow().wind_delta == 0 {
+                    if e2_contributing {
+                        self.add_out_pt(e1, pt);
+                        if e1_contributing {
+                            e1.borrow_mut().out_idx = UNASSIGNED;
+                        }
+                    }
+                } else {
+                    if e1_contributing {
+                        self.add_out_pt(e2, pt);
+                        if e2_contributing {
+                            e2.borrow_mut().out_idx = UNASSIGNED;
+                        }
+                    }
+                }
+            } else if e1.borrow().poly_typ != e2.borrow().poly_typ {
+                if e1.borrow().wind_delta == 0 && e2.borrow().wind_cnt.abs() == 1 && (self.clip_type != ClipType::Union || e2.borrow().wind_cnt2 == 0) {
+                    self.add_out_pt(e1, pt);
+                    if e1_contributing {
+                        e1.borrow_mut().out_idx = UNASSIGNED;
+                    }
+                } else if e2.borrow().wind_delta == 0 && e1.borrow().wind_cnt.abs() == 1 && (self.clip_type != ClipType::Union || e1.borrow().wind_cnt2 == 0) {
+                    self.add_out_pt(e2, pt);
+                    if e2_contributing {
+                        e2.borrow_mut().out_idx = UNASSIGNED;
+                    }
+                }
+            }
+            return;
+        }
+
+        // Update winding counts
+        if e1.borrow().poly_typ == e2.borrow().poly_typ {
+            if self.is_even_odd_fill_type(&e1.borrow()) {
+                let old_e1_wind_cnt = e1.borrow().wind_cnt;
+                e1.borrow_mut().wind_cnt = e2.borrow().wind_cnt;
+                e2.borrow_mut().wind_cnt = old_e1_wind_cnt;
+            } else {
+                if e1.borrow().wind_cnt + e2.borrow().wind_delta == 0 {
+                    e1.borrow_mut().wind_cnt = -e1.borrow().wind_cnt;
+                } else {
+                    e1.borrow_mut().wind_cnt += e2.borrow().wind_delta;
+                }
+                if e2.borrow().wind_cnt - e1.borrow().wind_delta == 0 {
+                    e2.borrow_mut().wind_cnt = -e2.borrow().wind_cnt;
+                } else {
+                    e2.borrow_mut().wind_cnt -= e1.borrow().wind_delta;
+                }
+            }
+        } else {
+            if !self.is_even_odd_fill_type(&e2.borrow()) {
+                e1.borrow_mut().wind_cnt2 += e2.borrow().wind_delta;
+            } else {
+                e1.borrow_mut().wind_cnt2 = if e1.borrow().wind_cnt2 == 0 { 1 } else { 0 };
+            }
+            if !self.is_even_odd_fill_type(&e1.borrow()) {
+                e2.borrow_mut().wind_cnt2 -= e1.borrow().wind_delta;
+            } else {
+                e2.borrow_mut().wind_cnt2 = if e2.borrow().wind_cnt2 == 0 { 1 } else { 0 };
+            }
+        }
+
+        let (e1_fill_type, e2_fill_type, e1_fill_type2, e2_fill_type2) = if e1.borrow().poly_typ == PolyType::Subject {
+            (self.subj_fill_type, self.clip_fill_type, self.clip_fill_type, self.subj_fill_type)
+        } else {
+            (self.clip_fill_type, self.subj_fill_type, self.subj_fill_type, self.clip_fill_type)
+        };
+
+        let e1_wc = match e1_fill_type {
+            PolyFillType::Positive => e1.borrow().wind_cnt,
+            PolyFillType::Negative => -e1.borrow().wind_cnt,
+            _ => e1.borrow().wind_cnt.abs(),
+        };
+
+        let e2_wc = match e2_fill_type {
+            PolyFillType::Positive => e2.borrow().wind_cnt,
+            PolyFillType::Negative => -e2.borrow().wind_cnt,
+            _ => e2.borrow().wind_cnt.abs(),
+        };
+
+        if e1_contributing && e2_contributing {
+            if (e1_wc != 0 && e1_wc != 1) || (e2_wc != 0 && e2_wc != 1) || (e1.borrow().poly_typ != e2.borrow().poly_typ && self.clip_type != ClipType::Xor) {
+                self.add_local_max_poly(e1, e2, pt);
+            } else {
+                self.add_out_pt(e1, pt);
+                self.add_out_pt(e2, pt);
+                self.swap_sides(e1, e2);
+                self.swap_poly_indexes(e1, e2);
+            }
+        } else if e1_contributing {
+            if e2_wc == 0 || e2_wc == 1 {
+                self.add_out_pt(e1, pt);
+                self.swap_sides(e1, e2);
+                self.swap_poly_indexes(e1, e2);
+            }
+        } else if e2_contributing {
+            if e1_wc == 0 || e1_wc == 1 {
+                self.add_out_pt(e2, pt);
+                self.swap_sides(e1, e2);
+                self.swap_poly_indexes(e1, e2);
+            }
+        } else if (e1_wc == 0 || e1_wc == 1) && (e2_wc == 0 || e2_wc == 1) {
+            let e1_wc2 = match e1_fill_type2 {
+                PolyFillType::Positive => e1.borrow().wind_cnt2,
+                PolyFillType::Negative => -e1.borrow().wind_cnt2,
+                _ => e1.borrow().wind_cnt2.abs(),
+            };
+
+            let e2_wc2 = match e2_fill_type2 {
+                PolyFillType::Positive => e2.borrow().wind_cnt2,
+                PolyFillType::Negative => -e2.borrow().wind_cnt2,
+                _ => e2.borrow().wind_cnt2.abs(),
+            };
+
+            if e1.borrow().poly_typ != e2.borrow().poly_typ {
+                self.add_local_min_poly(e1, e2, pt);
+            } else if e1_wc == 1 && e2_wc == 1 {
+                match self.clip_type {
+                    ClipType::Intersection => {
+                        if e1_wc2 > 0 && e2_wc2 > 0 {
+                            self.add_local_min_poly(e1, e2, pt);
+                        }
+                    }
+                    ClipType::Union => {
+                        if e1_wc2 <= 0 && e2_wc2 <= 0 {
+                            self.add_local_min_poly(e1, e2, pt);
+                        }
+                    }
+                    ClipType::Difference => {
+                        if (e1.borrow().poly_typ == PolyType::Clip && e1_wc2 > 0 && e2_wc2 > 0) || (e1.borrow().poly_typ == PolyType::Subject && e1_wc2 <= 0 && e2_wc2 <= 0) {
+                            self.add_local_min_poly(e1, e2, pt);
+                        }
+                    }
+                    ClipType::Xor => {
+                        self.add_local_min_poly(e1, e2, pt);
+                    }
+                }
+            } else {
+                self.swap_sides(e1, e2);
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

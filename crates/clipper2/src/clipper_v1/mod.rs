@@ -2781,6 +2781,43 @@ impl Clipper {
         }
         result
     }
+
+    fn poly2_contains_poly1(out_pt1: &OutPt, out_pt2: &OutPt) -> bool {
+        let mut op = out_pt1.clone();
+        loop {
+            let res = Clipper::point_in_polygon_out_pt(op.pt, out_pt2);
+            if res >= 0 {
+                return res > 0;
+            }
+            op = op.next.as_ref().unwrap().clone();
+            if Rc::ptr_eq(&op, &out_pt1) {
+                break;
+            }
+        }
+        true
+    }
+
+    fn fixup_first_lefts1(&mut self, old_out_rec: &Rc<RefCell<OutRec>>, new_out_rec: &Rc<RefCell<OutRec>>) {
+        for out_rec in &self.base.poly_outs {
+            let first_left = Clipper::parse_first_left(&out_rec.first_left);
+            if out_rec.pts.is_some() && Rc::ptr_eq(&first_left, old_out_rec) {
+                if Clipper::poly2_contains_poly1(out_rec.pts.as_ref().unwrap(), new_out_rec.borrow().pts.as_ref().unwrap()) {
+                    out_rec.first_left = Some(new_out_rec.clone());
+                }
+            }
+        }
+    }
+
+    fn parse_first_left(first_left: &Option<Rc<RefCell<OutRec>>>) -> Rc<RefCell<OutRec>> {
+        let mut first_left = first_left.clone();
+        while let Some(ref fl) = first_left {
+            if fl.borrow().pts.is_some() {
+                break;
+            }
+            first_left = fl.borrow().first_left.clone();
+        }
+        first_left.unwrap()
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

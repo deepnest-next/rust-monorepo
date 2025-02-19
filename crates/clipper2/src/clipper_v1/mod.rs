@@ -405,39 +405,61 @@ impl Clipper {
     }
 
     /// Executes the clipping operation and outputs the solution as a set of paths.
-    ///
-    /// This method sets internal state and then calls the core execute routine.
     pub fn execute(
         &mut self,
         clip_type: ClipType,
         solution: &mut Paths,
         fill_type: PolyFillType,
     ) -> bool {
+        self.execute_with_fill_types(clip_type, solution, fill_type, fill_type)
+    }
+
+    /// Executes the clipping operation and outputs the solution in a PolyTree.
+    pub fn execute_poly_tree(
+        &mut self,
+        clip_type: ClipType,
+        polytree: &mut PolyTree,
+        fill_type: PolyFillType,
+    ) -> bool {
+        self.execute_poly_tree_with_fill_types(clip_type, polytree, fill_type, fill_type)
+    }
+
+    /// Executes the clipping operation with specified subject and clip fill types.
+    pub fn execute_with_fill_types(
+        &mut self,
+        clip_type: ClipType,
+        solution: &mut Paths,
+        subj_fill_type: PolyFillType,
+        clip_fill_type: PolyFillType,
+    ) -> bool {
         if self.execute_locked {
             return false;
         }
-        self.execute_locked = true;
+        if self.has_open_paths {
+            panic!("Error: PolyTree struct is needed for open path clipping.");
+        }
 
-        // Clear any previous output.
+        self.execute_locked = true;
         solution.clear();
-        self.subj_fill_type = fill_type;
-        self.clip_fill_type = fill_type;
+        self.subj_fill_type = subj_fill_type;
+        self.clip_fill_type = clip_fill_type;
         self.clip_type = clip_type;
         self.using_poly_tree = false;
-
-        // Execute the internal algorithm.
-        let succeeded = self.execute_internal();
-
-        if succeeded {
-            self.build_result(solution);
+        let succeeded;
+        {
+            succeeded = self.execute_internal();
+            // Build the return polygons
+            if succeeded {
+                self.build_result(solution);
+            }
         }
         self.dispose_all_poly_pts();
         self.execute_locked = false;
         succeeded
     }
 
-    /// Executes the clipping operation and outputs the solution in a PolyTree.
-    pub fn execute_poly_tree(
+    /// Executes the clipping operation with specified subject and clip fill types, outputting to a PolyTree.
+    pub fn execute_poly_tree_with_fill_types(
         &mut self,
         clip_type: ClipType,
         polytree: &mut PolyTree,

@@ -1853,6 +1853,31 @@ impl Clipper {
             self.base.delete_from_ael(horz_edge);
         }
     }
+
+    /// Gets the next edge in the active edge list (AEL) based on the direction.
+    fn get_next_in_ael(&self, e: &Rc<RefCell<TEdge>>, direction: Direction) -> Option<Rc<RefCell<TEdge>>> {
+        if direction == Direction::LeftToRight {
+            e.borrow().next_in_ael.clone()
+        } else {
+            e.borrow().prev_in_ael.clone()
+        }
+    }
+
+    /// Checks if the edge is a minima.
+    fn is_minima(&self, e: &Rc<RefCell<TEdge>>) -> bool {
+        e.borrow().prev.as_ref().unwrap().borrow().next_in_lml.as_ref().map_or(false, |next_in_lml| !Rc::ptr_eq(next_in_lml, e))
+            && e.borrow().next.as_ref().unwrap().borrow().next_in_lml.as_ref().map_or(false, |next_in_lml| !Rc::ptr_eq(next_in_lml, e))
+    }
+
+    /// Checks if the edge is a maxima at the given Y coordinate.
+    fn is_maxima(&self, e: &Rc<RefCell<TEdge>>, y: CInt) -> bool {
+        e.borrow().top.y == y && e.borrow().next_in_lml.is_none()
+    }
+
+    /// Checks if the edge is intermediate at the given Y coordinate.
+    fn is_intermediate(&self, e: &Rc<RefCell<TEdge>>, y: CInt) -> bool {
+        e.borrow().top.y == y && e.borrow().next_in_lml.is_some()
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

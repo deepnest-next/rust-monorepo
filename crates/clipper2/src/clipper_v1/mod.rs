@@ -2181,6 +2181,51 @@ impl Clipper {
 
         ip
     }
+
+    /// Processes maxima for a given edge.
+    fn do_maxima(&mut self, e: &Rc<RefCell<TEdge>>) {
+        let e_max_pair = self.get_maxima_pair_ex(e);
+        if e_max_pair.is_none() {
+            if e.borrow().out_idx >= 0 {
+                self.add_out_pt(e, e.borrow().top);
+            }
+            self.base.delete_from_ael(e);
+            return;
+        }
+
+        let mut e_next = e.borrow().next_in_ael.clone();
+        while let Some(ref e_next_ref) = e_next {
+            if Rc::ptr_eq(e_next_ref, &e_max_pair.as_ref().unwrap()) {
+                break;
+            }
+            self.intersect_edges(e, e_next_ref, e.borrow().top);
+            self.base.swap_positions_in_ael(e, e_next_ref);
+            e_next = e.borrow().next_in_ael.clone();
+        }
+
+        if e.borrow().out_idx == UNASSIGNED && e_max_pair.as_ref().unwrap().borrow().out_idx == UNASSIGNED {
+            self.base.delete_from_ael(e);
+            self.base.delete_from_ael(e_max_pair.as_ref().unwrap());
+        } else if e.borrow().out_idx >= 0 && e_max_pair.as_ref().unwrap().borrow().out_idx >= 0 {
+            self.add_local_max_poly(e, e_max_pair.as_ref().unwrap(), e.borrow().top);
+            self.base.delete_from_ael(e);
+            self.base.delete_from_ael(e_max_pair.as_ref().unwrap());
+        } else if e.borrow().wind_delta == 0 {
+            if e.borrow().out_idx >= 0 {
+                self.add_out_pt(e, e.borrow().top);
+                e.borrow_mut().out_idx = UNASSIGNED;
+            }
+            self.base.delete_from_ael(e);
+
+            if e_max_pair.as_ref().unwrap().borrow().out_idx >= 0 {
+                self.add_out_pt(e_max_pair.as_ref().unwrap(), e.borrow().top);
+                e_max_pair.as_ref().unwrap().borrow_mut().out_idx = UNASSIGNED;
+            }
+            self.base.delete_from_ael(e_max_pair.as_ref().unwrap());
+        } else {
+            panic!("DoMaxima error");
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

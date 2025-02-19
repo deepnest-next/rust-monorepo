@@ -3049,6 +3049,41 @@ impl Clipper {
         a * 0.5
     }
 
+    /// Convert a self-intersecting polygon into a simplified polygon.
+    pub fn simplify_polygon(poly: &Path, fill_type: PolyFillType) -> Paths {
+        let mut result: Paths = Vec::new();
+        let mut c = Clipper::new(0); // assume a default constructor exists
+        c.strictly_simple = true;    // set strictly_simple flag, if available
+        c.add_path(poly.clone(), PolyType::Subject, true);
+        c.execute(ClipType::Union, &mut result, fill_type);
+        result
+    }
+
+    /// Convert self-intersecting polygons into simplified polygons.
+    pub fn simplify_polygons(polys: &Paths, fill_type: PolyFillType) -> Paths {
+        let mut result: Paths = Vec::new();
+        let mut c = Clipper::new(0);
+        c.strictly_simple = true;
+        c.add_paths(polys.clone(), PolyType::Subject, true);
+        c.execute(ClipType::Union, &mut result, fill_type);
+        result
+    }
+
+    /// Computes the squared distance between two IntPoint values.
+    fn distance_sqrd(pt1: &IntPoint, pt2: &IntPoint) -> f64 {
+        let dx = (pt1.x as f64) - (pt2.x as f64);
+        let dy = (pt1.y as f64) - (pt2.y as f64);
+        dx * dx + dy * dy
+    }
+
+    /// Computes the squared perpendicular distance from a point to a line defined by ln1 and ln2.
+    fn distance_from_line_sqrd(pt: &IntPoint, ln1: &IntPoint, ln2: &IntPoint) -> f64 {
+        let a = (ln1.y - ln2.y) as f64;
+        let b = (ln2.x - ln1.x) as f64;
+        let c = a * (ln1.x as f64) + b * (ln1.y as f64);
+        let c_val = a * (pt.x as f64) + b * (pt.y as f64) - c;
+        (c_val * c_val) / (a * a + b * b)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

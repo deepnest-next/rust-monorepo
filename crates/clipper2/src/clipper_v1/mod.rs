@@ -994,6 +994,40 @@ impl Clipper {
             }
         }
     }
+
+    /// Adds an edge to the sorted edge list (SEL).
+    fn add_edge_to_sel(&mut self, edge: &Rc<RefCell<TEdge>>) {
+        // SEL pointers in TEdge are used to build transient lists of horizontal edges.
+        // However, since we don't need to worry about processing order, all additions
+        // are made to the front of the list.
+        if self.sorted_edges.is_none() {
+            self.sorted_edges = Some(edge.clone());
+            edge.borrow_mut().prev_in_sel = None;
+            edge.borrow_mut().next_in_sel = None;
+        } else {
+            edge.borrow_mut().next_in_sel = self.sorted_edges.clone();
+            edge.borrow_mut().prev_in_sel = None;
+            self.sorted_edges.as_ref().unwrap().borrow_mut().prev_in_sel = Some(edge.clone());
+            self.sorted_edges = Some(edge.clone());
+        }
+    }
+
+    /// Pops an edge from the front of the sorted edge list (SEL).
+    fn pop_edge_from_sel(&mut self) -> Option<Rc<RefCell<TEdge>>> {
+        // Pop edge from front of SEL (i.e., SEL is a FILO list).
+        if let Some(e) = self.sorted_edges.take() {
+            let old_e = e.clone();
+            self.sorted_edges = e.borrow().next_in_sel.clone();
+            if let Some(ref sorted_edges) = self.sorted_edges {
+                sorted_edges.borrow_mut().prev_in_sel = None;
+            }
+            old_e.borrow_mut().next_in_sel = None;
+            old_e.borrow_mut().prev_in_sel = None;
+            Some(old_e)
+        } else {
+            None
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

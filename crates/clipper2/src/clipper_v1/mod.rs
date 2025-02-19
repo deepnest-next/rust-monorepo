@@ -588,25 +588,30 @@ impl Clipper {
 
     /// Disposes internal OutRec point lists.
     fn dispose_all_poly_pts(&mut self) {
+        for i in 0..self.base.poly_outs.len() {
+            self.base.dispose_out_rec(i);
+        }
         self.base.poly_outs.clear();
     }
 
     /// Adds a join between two output points with an offset.
     fn add_join(&mut self, op1: &OutPt, op2: &OutPt, off_pt: IntPoint) {
-        self.joins.push(Join {
+        let join = Join {
             out_pt1: Some(Rc::new(RefCell::new(op1.clone()))),
             out_pt2: Some(Rc::new(RefCell::new(op2.clone()))),
             off_pt,
-        });
+        };
+        self.joins.push(join);
     }
 
     /// Adds a ghost join for horizontal edges.
     fn add_ghost_join(&mut self, op: &OutPt, off_pt: IntPoint) {
-        self.ghost_joins.push(Join {
+        let join = Join {
             out_pt1: Some(Rc::new(RefCell::new(op.clone()))),
             out_pt2: None,
             off_pt,
-        });
+        };
+        self.ghost_joins.push(join);
     }
 
     /// Inserts a maxima value (new maximal x) into the maxima list.

@@ -2519,6 +2519,173 @@ impl Clipper {
         }
         true
     }
+
+    fn join_points(&self, j: &mut Join, out_rec1: &OutRec, out_rec2: &OutRec) -> bool {
+        let mut op1 = j.out_pt1.clone().unwrap();
+        let mut op2 = j.out_pt2.clone().unwrap();
+        let mut op1b;
+        let mut op2b;
+
+        let is_horizontal = op1.borrow().pt.y == j.off_pt.y;
+
+        if is_horizontal && j.off_pt == op1.borrow().pt && j.off_pt == op2.borrow().pt {
+            if out_rec1 != out_rec2 {
+                return false;
+            }
+            op1b = op1.borrow().next.clone().unwrap();
+            while op1b != op1 && op1b.borrow().pt == j.off_pt {
+                op1b = op1b.borrow().next.clone().unwrap();
+            }
+            let reverse1 = op1b.borrow().pt.y > j.off_pt.y;
+            op2b = op2.borrow().next.clone().unwrap();
+            while op2b != op2 && op2b.borrow().pt == j.off_pt {
+                op2b = op2b.borrow().next.clone().unwrap();
+            }
+            let reverse2 = op2b.borrow().pt.y > j.off_pt.y;
+            if reverse1 == reverse2 {
+                return false;
+            }
+            if reverse1 {
+                op1b = self.dup_out_pt(&op1, false);
+                op2b = self.dup_out_pt(&op2, true);
+                op1.borrow_mut().prev = Some(op2.clone());
+                op2.borrow_mut().next = Some(op1.clone());
+                op1b.borrow_mut().next = Some(op2b.clone());
+                op2b.borrow_mut().prev = Some(op1b.clone());
+                j.out_pt1 = Some(op1.clone());
+                j.out_pt2 = Some(op1b.clone());
+                return true;
+            } else {
+                op1b = self.dup_out_pt(&op1, true);
+                op2b = self.dup_out_pt(&op2, false);
+                op1.borrow_mut().next = Some(op2.clone());
+                op2.borrow_mut().prev = Some(op1.clone());
+                op1b.borrow_mut().prev = Some(op2b.clone());
+                op2b.borrow_mut().next = Some(op1b.clone());
+                j.out_pt1 = Some(op1.clone());
+                j.out_pt2 = Some(op1b.clone());
+                return true;
+            }
+        } else if is_horizontal {
+            op1b = op1.clone();
+            while op1.borrow().prev.as_ref().unwrap().borrow().pt.y == op1.borrow().pt.y
+                && op1.borrow().prev.as_ref().unwrap() != op1b
+                && op1.borrow().prev.as_ref().unwrap() != op2
+            {
+                op1 = op1.borrow().prev.clone().unwrap();
+            }
+            while op1b.borrow().next.as_ref().unwrap().borrow().pt.y == op1b.borrow().pt.y
+                && op1b.borrow().next.as_ref().unwrap() != op1
+                && op1b.borrow().next.as_ref().unwrap() != op2
+            {
+                op1b = op1b.borrow().next.clone().unwrap();
+            }
+            if op1b.borrow().next.as_ref().unwrap() == op1 || op1b.borrow().next.as_ref().unwrap() == op2 {
+                return false;
+            }
+
+            op2b = op2.clone();
+            while op2.borrow().prev.as_ref().unwrap().borrow().pt.y == op2.borrow().pt.y
+                && op2.borrow().prev.as_ref().unwrap() != op2b
+                && op2.borrow().prev.as_ref().unwrap() != op1b
+            {
+                op2 = op2.borrow().prev.clone().unwrap();
+            }
+            while op2b.borrow().next.as_ref().unwrap().borrow().pt.y == op2b.borrow().pt.y
+                && op2b.borrow().next.as_ref().unwrap() != op2
+                && op2b.borrow().next.as_ref().unwrap() != op1
+            {
+                op2b = op2b.borrow().next.clone().unwrap();
+            }
+            if op2b.borrow().next.as_ref().unwrap() == op2 || op2b.borrow().next.as_ref().unwrap() == op1 {
+                return false;
+            }
+
+            let (left, right);
+            if !self.get_overlap(op1.borrow().pt.x, op1b.borrow().pt.x, op2.borrow().pt.x, op2b.borrow().pt.x, &mut left, &mut right) {
+                return false;
+            }
+
+            let (pt, discard_left_side);
+            if op1.borrow().pt.x >= left && op1.borrow().pt.x <= right {
+                pt = op1.borrow().pt;
+                discard_left_side = op1.borrow().pt.x > op1b.borrow().pt.x;
+            } else if op2.borrow().pt.x >= left && op2.borrow().pt.x <= right {
+                pt = op2.borrow().pt;
+                discard_left_side = op2.borrow().pt.x > op2b.borrow().pt.x;
+            } else if op1b.borrow().pt.x >= left && op1b.borrow().pt.x <= right {
+                pt = op1b.borrow().pt;
+                discard_left_side = op1b.borrow().pt.x > op1.borrow().pt.x;
+            } else {
+                pt = op2b.borrow().pt;
+                discard_left_side = op2b.borrow().pt.x > op2.borrow().pt.x;
+            }
+            j.out_pt1 = Some(op1.clone());
+            j.out_pt2 = Some(op2.clone());
+            return self.join_horz(&op1, op1b, &op2, op2b, pt, discard_left_side);
+        } else {
+            op1b = op1.borrow().next.clone().unwrap();
+            while op1b.borrow().pt == op1.borrow().pt && op1b != op1 {
+                op1b = op1b.borrow().next.clone().unwrap();
+            }
+            let reverse1 = op1b.borrow().pt.y > op1.borrow().pt.y
+                || !self.slopes_equal(op1.borrow().pt, op1b.borrow().pt, j.off_pt, self.base.use_full_range);
+            if reverse1 {
+                op1b = op1.borrow().prev.clone().unwrap();
+                while op1b.borrow().pt == op1.borrow().pt && op1b != op1 {
+                    op1b = op1b.borrow().prev.clone().unwrap();
+                }
+                if op1b.borrow().pt.y > op1.borrow().pt.y
+                    || !self.slopes_equal(op1.borrow().pt, op1b.borrow().pt, j.off_pt, self.base.use_full_range)
+                {
+                    return false;
+                }
+            }
+            op2b = op2.borrow().next.clone().unwrap();
+            while op2b.borrow().pt == op2.borrow().pt && op2b != op2 {
+                op2b = op2b.borrow().next.clone().unwrap();
+            }
+            let reverse2 = op2b.borrow().pt.y > op2.borrow().pt.y
+                || !self.slopes_equal(op2.borrow().pt, op2b.borrow().pt, j.off_pt, self.base.use_full_range);
+            if reverse2 {
+                op2b = op2.borrow().prev.clone().unwrap();
+                while op2b.borrow().pt == op2.borrow().pt && op2b != op2 {
+                    op2b = op2b.borrow().prev.clone().unwrap();
+                }
+                if op2b.borrow().pt.y > op2.borrow().pt.y
+                    || !self.slopes_equal(op2.borrow().pt, op2b.borrow().pt, j.off_pt, self.base.use_full_range)
+                {
+                    return false;
+                }
+            }
+
+            if op1b == op1 || op2b == op2 || op1b == op2b || (out_rec1 == out_rec2 && reverse1 == reverse2) {
+                return false;
+            }
+
+            if reverse1 {
+                op1b = self.dup_out_pt(&op1, false);
+                op2b = self.dup_out_pt(&op2, true);
+                op1.borrow_mut().prev = Some(op2.clone());
+                op2.borrow_mut().next = Some(op1.clone());
+                op1b.borrow_mut().next = Some(op2b.clone());
+                op2b.borrow_mut().prev = Some(op1b.clone());
+                j.out_pt1 = Some(op1.clone());
+                j.out_pt2 = Some(op1b.clone());
+                return true;
+            } else {
+                op1b = self.dup_out_pt(&op1, true);
+                op2b = self.dup_out_pt(&op2, false);
+                op1.borrow_mut().next = Some(op2.clone());
+                op2.borrow_mut().prev = Some(op1.clone());
+                op1b.borrow_mut().prev = Some(op2b.clone());
+                op2b.borrow_mut().next = Some(op1b.clone());
+                j.out_pt1 = Some(op1.clone());
+                j.out_pt2 = Some(op1b.clone());
+                return true;
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

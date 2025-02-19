@@ -3084,6 +3084,130 @@ impl Clipper {
         let c_val = a * (pt.x as f64) + b * (pt.y as f64) - c;
         (c_val * c_val) / (a * a + b * b)
     }
+
+    /// Returns true if the three points are nearly collinear within the given squared distance tolerance.
+    pub fn slopes_near_collinear(pt1: &IntPoint, pt2: &IntPoint, pt3: &IntPoint, dist_sqrd: f64) -> bool {
+        if (pt1.x - pt2.x).abs() > (pt1.y - pt2.y).abs() {
+            if ((pt1.x > pt2.x) == (pt1.x < pt3.x)) {
+                Self::distance_from_line_sqrd(pt1, pt2, pt3) < dist_sqrd
+            } else if ((pt2.x > pt1.x) == (pt2.x < pt3.x)) {
+                Self::distance_from_line_sqrd(pt2, pt1, pt3) < dist_sqrd
+            } else {
+                Self::distance_from_line_sqrd(pt3, pt1, pt2) < dist_sqrd
+            }
+        } else {
+            if ((pt1.y > pt2.y) == (pt1.y < pt3.y)) {
+                Self::distance_from_line_sqrd(pt1, pt2, pt3) < dist_sqrd
+            } else if ((pt2.y > pt1.y) == (pt2.y < pt3.y)) {
+                Self::distance_from_line_sqrd(pt2, pt1, pt3) < dist_sqrd
+            } else {
+                Self::distance_from_line_sqrd(pt3, pt1, pt2) < dist_sqrd
+            }
+        }
+    }
+
+    /// Returns true if pt1 and pt2 are close enough (within the squared distance provided).
+    pub fn points_are_close(pt1: &IntPoint, pt2: &IntPoint, dist_sqrd: f64) -> bool {
+        let dx = pt1.x as f64 - pt2.x as f64;
+        let dy = pt1.y as f64 - pt2.y as f64;
+        (dx * dx + dy * dy) <= dist_sqrd
+    }
+
+    /// Removes 'op' from its circular linked list by returning its previous point.
+    /// It updates the adjacent pointers and resets the index.
+    pub fn exclude_op(op: &Rc<RefCell<OutPt>>) -> Rc<RefCell<OutPt>> {
+        let result = op.borrow().prev.as_ref().unwrap().clone();
+        {
+            let next = op.borrow().next.as_ref().unwrap().clone();
+            result.borrow_mut().next = Some(next.clone());
+            next.borrow_mut().prev = Some(result.clone());
+        }
+        result.borrow_mut().idx = 0;
+        result
+    }
+
+    /// Cleans a polygon by removing near-collinear and close vertices.
+    pub fn clean_polygon(path: &Path, distance: f64) -> Path {
+        let cnt = path.len();
+        if cnt == 0 {
+            return Vec::new();
+        }
+        // Build circular linked list of OutPt.
+        let mut out_pts: Vec<Rc<RefCell<OutPt>>> = Vec::with_capacity(cnt);
+        for _ in 0..cnt {
+            out_pts.push(Rc::new(RefCell::new(OutPt {
+                idx: 0,
+                pt: IntPoint::new(0, 0),
+                next: None,
+                prev: None,
+            })));
+        }
+        for i in 0..cnt {
+            let pt = path[i];
+            out_pts[i].borrow_mut().pt = pt;
+            out_pts[i].borrow_mut().next = Some(out_pts[(i + 1) % cnt].clone());
+            out_pts[(i + 1) % cnt].borrow_mut().prev = Some(out_pts[i].clone());
+            out_pts[i].borrow_mut().idx = 0;
+        }
+        let dist_sqrd = distance * distance;
+        let mut op = out_pts[0].clone();
+        // Mark vertices that fail cleaning by processing until a vertex has been marked.
+        while op.borrow().idx == 0
+            && !Rc::ptr_eq(op.borrow().next.as_ref().unwrap(), op.borrow().prev.as_ref().unwrap())
+        {
+            if Self::points_are_close(&op.borrow().pt, &op.borrow().prev.as_ref().unwrap().borrow().pt, dist_sqrd) {
+                op = Self::exclude_op(&op);
+            } else if Self::points_are_close(
+                &op.borrow().prev.as_ref().unwrap().borrow().pt,
+                &op.borrow().next.as_ref().unwrap().borrow().pt,
+                dist_sqrd,
+            ) {
+                let _ = Self::exclude_op(op.borrow().next.as_ref().unwrap());
+                op = Self::exclude_op(&op);
+            } else if Self::slopes_near_collinear(
+                &op.borrow().prev.as_ref().unwrap().borrow().pt,
+                &op.borrow().pt,
+                &op.borrow().next.as_ref().unwrap().borrow().pt,
+                dist_sqrd,
+            ) {
+                op = Self::exclude_op(&op);
+            } else {
+                op.borrow_mut().idx = 1;
+                op = op.borrow().next.as_ref().unwrap().clone();
+            }
+        }
+        // Determine the number of remaining points.
+        let mut count = 0;
+        let start = op.clone();
+        let mut temp = op.clone();
+        loop {
+            count += 1;
+            temp = temp.borrow().next.as_ref().unwrap().clone();
+            if Rc::ptr_eq(&temp, &start) {
+                break;
+            }
+        }
+        if count < 3 {
+            return Vec::new();
+        }
+        // Build final cleaned path.
+        let mut result = Vec::with_capacity(count);
+        temp = start.clone();
+        for _ in 0..count {
+            result.push(temp.borrow().pt);
+            temp = temp.borrow().next.as_ref().unwrap().clone();
+        }
+        result
+    }
+
+    /// Cleans multiple polygons.
+    pub fn clean_polygons(polys: &Paths, distance: f64) -> Paths {
+         let mut result = Vec::with_capacity(polys.len());
+         for poly in polys {
+             result.push(Self::clean_polygon(poly, distance));
+         }
+         result
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -3280,6 +3280,45 @@ impl Clipper {
         let _ = c.execute(ClipType::Union, &mut solution, PolyFillType::NonZero, PolyFillType::NonZero);
         solution
     }
+
+    /// Computes the Minkowski difference for two paths.
+    pub fn minkowski_diff(poly1: &Path, poly2: &Path) -> Paths {
+        let paths = Self::minkowski(poly1, poly2, false, true);
+        let mut c = Clipper::new(0);
+        c.add_paths(&paths, PolyType::Subject, true);
+        let _ = c.execute(ClipType::Union, &mut paths, PolyFillType::NonZero, PolyFillType::NonZero);
+        paths
+    }
+
+    /// Converts a PolyTree to a set of paths.
+    pub fn poly_tree_to_paths(polytree: &PolyTree) -> Paths {
+        let mut result = Paths::with_capacity(polytree.total());
+        Self::add_poly_node_to_paths(&polytree.root, NodeType::Any, &mut result);
+        result
+    }
+
+    /// Adds a PolyNode to a set of paths based on the node type.
+    fn add_poly_node_to_paths(polynode: &PolyNode, nt: NodeType, paths: &mut Paths) {
+        let match_node = match nt {
+            NodeType::Open => return,
+            NodeType::Closed => !polynode.is_open,
+            NodeType::Any => true,
+        };
+
+        if !polynode.polygon.is_empty() && match_node {
+            paths.push(polynode.polygon.clone());
+        }
+        for child in &polynode.childs {
+            Self::add_poly_node_to_paths(child, nt, paths);
+        }
+    }
+}
+
+/// Enum representing the type of node.
+enum NodeType {
+    Any,
+    Open,
+    Closed,
 }
 
 ////////////////////////////////////////////////////////////////////////////////

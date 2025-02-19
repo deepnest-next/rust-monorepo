@@ -489,16 +489,66 @@ impl Clipper {
 
     /// Executes the core algorithm.
     ///
-    /// This function should process scanbeams, handle intersections, and update the active edge list.
+    /// This function processes scanbeams, handles intersections, and updates the active edge list.
     fn execute_internal(&mut self) -> bool {
         // Reset state.
         self.base.reset();
         self.sorted_edges = None;
         self.maxima = None;
 
-        // The main loop processes scanbeams until none remain.
-        // (A proper translation would iterate over local minima and call routines to process horizontals etc.)
-        unimplemented!("Implement ExecuteInternal: core algorithm loop");
+        let mut bot_y: CInt;
+        let mut top_y: CInt;
+
+        if !self.base.pop_scanbeam().map_or(false, |y| {
+            bot_y = y;
+            true
+        }) {
+            return false;
+        }
+
+        self.insert_local_minima_into_ael(bot_y);
+
+        while self.base.pop_scanbeam().map_or(false, |y| {
+            top_y = y;
+            true
+        }) || self.base.local_minima_pending() {
+            self.process_horizontals();
+            self.ghost_joins.clear();
+            if !self.process_intersections(top_y) {
+                return false;
+            }
+            self.process_edges_at_top_of_scanbeam(top_y);
+            bot_y = top_y;
+            self.insert_local_minima_into_ael(bot_y);
+        }
+
+        // Fix orientations
+        for out_rec in &mut self.base.poly_outs {
+            if out_rec.pts.is_none() || out_rec.is_open {
+                continue;
+            }
+            if (out_rec.is_hole ^ self.reverse_solution) == (self.area(out_rec) > 0.0) {
+                self.reverse_poly_pt_links(out_rec.pts.as_ref().unwrap());
+            }
+        }
+
+        self.join_common_edges();
+
+        for out_rec in &mut self.base.poly_outs {
+            if out_rec.pts.is_none() {
+                continue;
+            } else if out_rec.is_open {
+                self.fixup_out_polyline(out_rec);
+            } else {
+                self.fixup_out_polygon(out_rec);
+            }
+        }
+
+        if self.strictly_simple {
+            self.do_simple_polygons();
+        }
+
+        true
     }
 
     /// Builds the final solution paths from the internal OutRec structures.

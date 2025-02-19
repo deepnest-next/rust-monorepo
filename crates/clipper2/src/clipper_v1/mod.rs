@@ -2412,6 +2412,113 @@ impl Clipper {
         }
         *left < *right
     }
+
+    /// Joins two horizontal edges.
+    fn join_horz(
+        &self,
+        op1: &Rc<RefCell<OutPt>>,
+        mut op1b: Rc<RefCell<OutPt>>,
+        op2: &Rc<RefCell<OutPt>>,
+        mut op2b: Rc<RefCell<OutPt>>,
+        pt: IntPoint,
+        discard_left: bool,
+    ) -> bool {
+        let dir1 = if op1.borrow().pt.x > op1b.borrow().pt.x {
+            Direction::RightToLeft
+        } else {
+            Direction::LeftToRight
+        };
+        let dir2 = if op2.borrow().pt.x > op2b.borrow().pt.x {
+            Direction::RightToLeft
+        } else {
+            Direction::LeftToRight
+        };
+
+        if dir1 == dir2 {
+            return false;
+        }
+
+        if dir1 == Direction::LeftToRight {
+            while op1.borrow().next.as_ref().unwrap().borrow().pt.x <= pt.x
+                && op1.borrow().next.as_ref().unwrap().borrow().pt.x >= op1.borrow().pt.x
+                && op1.borrow().next.as_ref().unwrap().borrow().pt.y == pt.y
+            {
+                op1 = op1.borrow().next.as_ref().unwrap().clone();
+            }
+            if discard_left && op1.borrow().pt.x != pt.x {
+                op1 = op1.borrow().next.as_ref().unwrap().clone();
+            }
+            op1b = self.dup_out_pt(&op1, !discard_left);
+            if op1b.borrow().pt != pt {
+                op1 = op1b.clone();
+                op1.borrow_mut().pt = pt;
+                op1b = self.dup_out_pt(&op1, !discard_left);
+            }
+        } else {
+            while op1.borrow().next.as_ref().unwrap().borrow().pt.x >= pt.x
+                && op1.borrow().next.as_ref().unwrap().borrow().pt.x <= op1.borrow().pt.x
+                && op1.borrow().next.as_ref().unwrap().borrow().pt.y == pt.y
+            {
+                op1 = op1.borrow().next.as_ref().unwrap().clone();
+            }
+            if !discard_left && op1.borrow().pt.x != pt.x {
+                op1 = op1.borrow().next.as_ref().unwrap().clone();
+            }
+            op1b = self.dup_out_pt(&op1, discard_left);
+            if op1b.borrow().pt != pt {
+                op1 = op1b.clone();
+                op1.borrow_mut().pt = pt;
+                op1b = self.dup_out_pt(&op1, discard_left);
+            }
+        }
+
+        if dir2 == Direction::LeftToRight {
+            while op2.borrow().next.as_ref().unwrap().borrow().pt.x <= pt.x
+                && op2.borrow().next.as_ref().unwrap().borrow().pt.x >= op2.borrow().pt.x
+                && op2.borrow().next.as_ref().unwrap().borrow().pt.y == pt.y
+            {
+                op2 = op2.borrow().next.as_ref().unwrap().clone();
+            }
+            if discard_left && op2.borrow().pt.x != pt.x {
+                op2 = op2.borrow().next.as_ref().unwrap().clone();
+            }
+            op2b = self.dup_out_pt(&op2, !discard_left);
+            if op2b.borrow().pt != pt {
+                op2 = op2b.clone();
+                op2.borrow_mut().pt = pt;
+                op2b = self.dup_out_pt(&op2, !discard_left);
+            }
+        } else {
+            while op2.borrow().next.as_ref().unwrap().borrow().pt.x >= pt.x
+                && op2.borrow().next.as_ref().unwrap().borrow().pt.x <= op2.borrow().pt.x
+                && op2.borrow().next.as_ref().unwrap().borrow().pt.y == pt.y
+            {
+                op2 = op2.borrow().next.as_ref().unwrap().clone();
+            }
+            if !discard_left && op2.borrow().pt.x != pt.x {
+                op2 = op2.borrow().next.as_ref().unwrap().clone();
+            }
+            op2b = self.dup_out_pt(&op2, discard_left);
+            if op2b.borrow().pt != pt {
+                op2 = op2b.clone();
+                op2.borrow_mut().pt = pt;
+                op2b = self.dup_out_pt(&op2, discard_left);
+            }
+        }
+
+        if (dir1 == Direction::LeftToRight) == discard_left {
+            op1.borrow_mut().prev = Some(op2.clone());
+            op2.borrow_mut().next = Some(op1.clone());
+            op1b.borrow_mut().next = Some(op2b.clone());
+            op2b.borrow_mut().prev = Some(op1b.clone());
+        } else {
+            op1.borrow_mut().next = Some(op2.clone());
+            op2.borrow_mut().prev = Some(op1.clone());
+            op1b.borrow_mut().prev = Some(op2b.clone());
+            op2b.borrow_mut().next = Some(op1b.clone());
+        }
+        true
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

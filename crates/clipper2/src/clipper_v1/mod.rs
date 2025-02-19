@@ -669,6 +669,93 @@ impl Clipper {
         out_rec.first_left = orfl;
     }
 
+    /// Inserts local minima into the active edge list.
+    fn insert_local_minima_into_ael(&mut self, bot_y: CInt) {
+        while let Some(lm) = self.base.pop_local_minima(bot_y) {
+            let lb = lm.left_bound.clone();
+            let rb = lm.right_bound.clone();
+
+            let mut op1: Option<Rc<RefCell<OutPt>>> = None;
+            if lb.is_none() {
+                let rb = rb.unwrap();
+                self.insert_edge_into_ael(&rb, None);
+                self.set_winding_count(&rb);
+                if self.is_contributing(&rb) {
+                    op1 = Some(self.add_out_pt(&rb, rb.borrow().bot));
+                }
+            } else if rb.is_none() {
+                let lb = lb.unwrap();
+                self.insert_edge_into_ael(&lb, None);
+                self.set_winding_count(&lb);
+                if self.is_contributing(&lb) {
+                    op1 = Some(self.add_out_pt(&lb, lb.borrow().bot));
+                }
+                self.base.insert_scanbeam(lb.borrow().top.y);
+            } else {
+                let lb = lb.unwrap();
+                let rb = rb.unwrap();
+                self.insert_edge_into_ael(&lb, None);
+                self.insert_edge_into_ael(&rb, Some(&lb));
+                self.set_winding_count(&lb);
+                rb.borrow_mut().wind_cnt = lb.borrow().wind_cnt;
+                rb.borrow_mut().wind_cnt2 = lb.borrow().wind_cnt2;
+                if self.is_contributing(&lb) {
+                    op1 = Some(self.add_local_min_poly(&lb, &rb, lb.borrow().bot));
+                }
+                self.base.insert_scanbeam(lb.borrow().top.y);
+            }
+
+            if let Some(rb) = rb {
+                if self.base.is_horizontal(&rb.borrow()) {
+                    if rb.borrow().next_in_lml.is_some() {
+                        self.base.insert_scanbeam(rb.borrow().next_in_lml.as_ref().unwrap().borrow().top.y);
+                    }
+                    self.add_edge_to_sel(&rb);
+                } else {
+                    self.base.insert_scanbeam(rb.borrow().top.y);
+                }
+            }
+
+            if lb.is_none() || rb.is_none() {
+                continue;
+            }
+
+            let lb = lb.unwrap();
+            let rb = rb.unwrap();
+
+            if let Some(op1) = op1 {
+                if self.base.is_horizontal(&rb.borrow()) && !self.ghost_joins.is_empty() && rb.borrow().wind_delta != 0 {
+                    for j in &self.ghost_joins {
+                        if self.horz_segments_overlap(j.out_pt1.as_ref().unwrap().borrow().pt.x, j.off_pt.x, rb.borrow().bot.x, rb.borrow().top.x) {
+                            self.add_join(j.out_pt1.as_ref().unwrap(), &op1, j.off_pt);
+                        }
+                    }
+                }
+
+                if lb.borrow().out_idx >= 0 && lb.borrow().prev_in_ael.is_some() && lb.borrow().prev_in_ael.as_ref().unwrap().borrow().curr.x == lb.borrow().bot.x && lb.borrow().prev_in_ael.as_ref().unwrap().borrow().out_idx >= 0 && self.base.slopes_equal(&lb.borrow().prev_in_ael.as_ref().unwrap().borrow(), &lb.borrow(), self.base.use_full_range) && lb.borrow().wind_delta != 0 && lb.borrow().prev_in_ael.as_ref().unwrap().borrow().wind_delta != 0 {
+                    let op2 = self.add_out_pt(&lb.borrow().prev_in_ael.as_ref().unwrap(), lb.borrow().bot);
+                    self.add_join(&op1, &op2, lb.borrow().top);
+                }
+
+                if !Rc::ptr_eq(&lb.borrow().next_in_ael, &Some(Rc::new(RefCell::new(rb.borrow().clone())))) {
+                    if rb.borrow().out_idx >= 0 && rb.borrow().prev_in_ael.as_ref().unwrap().borrow().out_idx >= 0 && self.base.slopes_equal(&rb.borrow().prev_in_ael.as_ref().unwrap().borrow(), &rb.borrow(), self.base.use_full_range) && rb.borrow().wind_delta != 0 && rb.borrow().prev_in_ael.as_ref().unwrap().borrow().wind_delta != 0 {
+                        let op2 = self.add_out_pt(&rb.borrow().prev_in_ael.as_ref().unwrap(), rb.borrow().bot);
+                        self.add_join(&op1, &op2, rb.borrow().top);
+                    }
+
+                    let mut e = lb.borrow().next_in_ael.clone();
+                    while let Some(ref e_ref) = e {
+                        if Rc::ptr_eq(e_ref, &rb) {
+                            break;
+                        }
+                        self.intersect_edges(&rb, e_ref, lb.borrow().curr);
+                        e = e_ref.borrow().next_in_ael.clone();
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////

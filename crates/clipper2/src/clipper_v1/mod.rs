@@ -2818,6 +2818,35 @@ impl Clipper {
         }
         first_left.unwrap()
     }
+
+    fn fixup_first_lefts2(&mut self, inner_out_rec: &Rc<RefCell<OutRec>>, outer_out_rec: &Rc<RefCell<OutRec>>) {
+        let orfl = outer_out_rec.borrow().first_left.clone();
+        for out_rec in &self.base.poly_outs {
+            if out_rec.pts.is_none() || Rc::ptr_eq(out_rec, outer_out_rec) || Rc::ptr_eq(out_rec, inner_out_rec) {
+                continue;
+            }
+            let first_left = Clipper::parse_first_left(&out_rec.first_left);
+            if !Rc::ptr_eq(&first_left, &orfl) && !Rc::ptr_eq(&first_left, inner_out_rec) && !Rc::ptr_eq(&first_left, outer_out_rec) {
+                continue;
+            }
+            if Clipper::poly2_contains_poly1(out_rec.pts.as_ref().unwrap(), inner_out_rec.borrow().pts.as_ref().unwrap()) {
+                out_rec.first_left = Some(inner_out_rec.clone());
+            } else if Clipper::poly2_contains_poly1(out_rec.pts.as_ref().unwrap(), outer_out_rec.borrow().pts.as_ref().unwrap()) {
+                out_rec.first_left = Some(outer_out_rec.clone());
+            } else if Rc::ptr_eq(&out_rec.first_left, inner_out_rec) || Rc::ptr_eq(&out_rec.first_left, outer_out_rec) {
+                out_rec.first_left = orfl.clone();
+            }
+        }
+    }
+
+    fn fixup_first_lefts3(&mut self, old_out_rec: &Rc<RefCell<OutRec>>, new_out_rec: &Rc<RefCell<OutRec>>) {
+        for out_rec in &self.base.poly_outs {
+            let first_left = Clipper::parse_first_left(&out_rec.first_left);
+            if out_rec.pts.is_some() && Rc::ptr_eq(&first_left, old_out_rec) {
+                out_rec.first_left = Some(new_out_rec.clone());
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

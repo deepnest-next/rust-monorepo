@@ -1332,6 +1332,55 @@ impl Clipper {
         }
         pp
     }
+
+    /// Determines which OutRec has the lower bottom point.
+    fn get_lowermost_rec(&mut self, out_rec1: &Rc<RefCell<OutRec>>, out_rec2: &Rc<RefCell<OutRec>>) -> Rc<RefCell<OutRec>> {
+        if out_rec1.borrow().bottom_pt.is_none() {
+            out_rec1.borrow_mut().bottom_pt = Some(self.get_bottom_pt(out_rec1.borrow().pts.as_ref().unwrap()));
+        }
+        if out_rec2.borrow().bottom_pt.is_none() {
+            out_rec2.borrow_mut().bottom_pt = Some(self.get_bottom_pt(out_rec2.borrow().pts.as_ref().unwrap()));
+        }
+        let b_pt1 = out_rec1.borrow().bottom_pt.as_ref().unwrap();
+        let b_pt2 = out_rec2.borrow().bottom_pt.as_ref().unwrap();
+        if b_pt1.borrow().pt.y > b_pt2.borrow().pt.y {
+            out_rec1.clone()
+        } else if b_pt1.borrow().pt.y < b_pt2.borrow().pt.y {
+            out_rec2.clone()
+        } else if b_pt1.borrow().pt.x < b_pt2.borrow().pt.x {
+            out_rec1.clone()
+        } else if b_pt1.borrow().pt.x > b_pt2.borrow().pt.x {
+            out_rec2.clone()
+        } else if Rc::ptr_eq(&b_pt1.borrow().next.as_ref().unwrap(), b_pt1) {
+            out_rec2.clone()
+        } else if Rc::ptr_eq(&b_pt2.borrow().next.as_ref().unwrap(), b_pt2) {
+            out_rec1.clone()
+        } else if self.first_is_bottom_pt(b_pt1, b_pt2) {
+            out_rec1.clone()
+        } else {
+            out_rec2.clone()
+        }
+    }
+
+    /// Determines if OutRec1 is to the right of OutRec2.
+    fn out_rec1_right_of_out_rec2(&self, mut out_rec1: &Rc<RefCell<OutRec>>, out_rec2: &Rc<RefCell<OutRec>>) -> bool {
+        while let Some(ref first_left) = out_rec1.borrow().first_left {
+            out_rec1 = first_left;
+            if Rc::ptr_eq(out_rec1, out_rec2) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Gets the OutRec for the given index.
+    fn get_out_rec(&self, idx: i32) -> Rc<RefCell<OutRec>> {
+        let mut out_rec = self.base.poly_outs[idx as usize].clone();
+        while !Rc::ptr_eq(&out_rec, &self.base.poly_outs[out_rec.borrow().idx as usize]) {
+            out_rec = self.base.poly_outs[out_rec.borrow().idx as usize].clone();
+        }
+        out_rec
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

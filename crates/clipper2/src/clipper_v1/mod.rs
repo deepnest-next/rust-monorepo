@@ -1245,7 +1245,7 @@ impl Clipper {
                     e_tmp = None; // paired
                 }
             }
-            e2 = e2_ref.borrow().prev_in_ael.clone();
+            e2 = e_ref.borrow().prev_in_ael.clone();
         }
 
         if let Some(e_tmp) = e_tmp {
@@ -1640,6 +1640,45 @@ impl Clipper {
             } else {
                 self.swap_sides(e1, e2);
             }
+        }
+    }
+
+    /// Deletes an edge from the sorted edge list (SEL).
+    fn delete_from_sel(&mut self, e: &Rc<RefCell<TEdge>>) {
+        let sel_prev = e.borrow().prev_in_sel.clone();
+        let sel_next = e.borrow().next_in_sel.clone();
+        if sel_prev.is_none() && sel_next.is_none() && !Rc::ptr_eq(&Some(e.clone()), &self.sorted_edges) {
+            return; // already deleted
+        }
+        if let Some(ref sel_prev) = sel_prev {
+            sel_prev.borrow_mut().next_in_sel = sel_next.clone();
+        } else {
+            self.sorted_edges = sel_next.clone();
+        }
+        if let Some(ref sel_next) = sel_next {
+            sel_next.borrow_mut().prev_in_sel = sel_prev.clone();
+        }
+        e.borrow_mut().next_in_sel = None;
+        e.borrow_mut().prev_in_sel = None;
+    }
+
+    /// Processes all horizontal edges in the sorted edge list (SEL).
+    fn process_horizontals(&mut self) {
+        while let Some(horz_edge) = self.pop_edge_from_sel() {
+            self.process_horizontal(&horz_edge);
+        }
+    }
+
+    /// Determines the direction and left/right bounds of a horizontal edge.
+    fn get_horz_direction(&self, horz_edge: &Rc<RefCell<TEdge>>, dir: &mut Direction, left: &mut CInt, right: &mut CInt) {
+        if horz_edge.borrow().bot.x < horz_edge.borrow().top.x {
+            *left = horz_edge.borrow().bot.x;
+            *right = horz_edge.borrow().top.x;
+            *dir = Direction::LeftToRight;
+        } else {
+            *left = horz_edge.borrow().top.x;
+            *right = horz_edge.borrow().bot.x;
+            *dir = Direction::RightToLeft;
         }
     }
 }

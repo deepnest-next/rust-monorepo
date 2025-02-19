@@ -781,6 +781,45 @@ impl Clipper {
         }
     }
 
+    /// Determines if edge e2 should be inserted before edge e1 in the active edge list.
+    fn e2_inserts_before_e1(&self, e1: &Rc<RefCell<TEdge>>, e2: &Rc<RefCell<TEdge>>) -> bool {
+        if e2.borrow().curr.x == e1.borrow().curr.x {
+            if e2.borrow().top.y > e1.borrow().top.y {
+                e2.borrow().top.x < self.top_x(e1, e2.borrow().top.y)
+            } else {
+                e1.borrow().top.x > self.top_x(e2, e1.borrow().top.y)
+            }
+        } else {
+            e2.borrow().curr.x < e1.borrow().curr.x
+        }
+    }
+
+    /// Calculates the top X coordinate of an edge at a given Y coordinate.
+    fn top_x(&self, edge: &Rc<RefCell<TEdge>>, current_y: CInt) -> CInt {
+        if current_y == edge.borrow().top.y {
+            edge.borrow().top.x
+        } else {
+            edge.borrow().bot.x + edge.borrow().dx as CInt * (current_y - edge.borrow().bot.y)
+        }
+    }
+
+    /// Determines if the fill type for the edge is EvenOdd.
+    fn is_even_odd_fill_type(&self, edge: &TEdge) -> bool {
+        if edge.poly_typ == PolyType::Subject {
+            self.subj_fill_type == PolyFillType::EvenOdd
+        } else {
+            self.clip_fill_type == PolyFillType::EvenOdd
+        }
+    }
+
+    /// Determines if the alternate fill type for the edge is EvenOdd.
+    fn is_even_odd_alt_fill_type(&self, edge: &TEdge) -> bool {
+        if edge.poly_typ == PolyType::Subject {
+            self.clip_fill_type == PolyFillType::EvenOdd
+        } else {
+            self.subj_fill_type == PolyFillType::EvenOdd
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

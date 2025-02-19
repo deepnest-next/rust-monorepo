@@ -1681,6 +1681,178 @@ impl Clipper {
             *dir = Direction::RightToLeft;
         }
     }
+
+    /// Processes a horizontal edge.
+    fn process_horizontal(&mut self, horz_edge: &Rc<RefCell<TEdge>>) {
+        let mut dir = Direction::LeftToRight;
+        let mut horz_left = 0;
+        let mut horz_right = 0;
+        let is_open = horz_edge.borrow().wind_delta == 0;
+
+        self.get_horz_direction(horz_edge, &mut dir, &mut horz_left, &mut horz_right);
+
+        let mut e_last_horz = horz_edge.clone();
+        let mut e_max_pair = None;
+        while e_last_horz.borrow().next_in_lml.is_some() && self.base.is_horizontal(&e_last_horz.borrow().next_in_lml.as_ref().unwrap().borrow()) {
+            e_last_horz = e_last_horz.borrow().next_in_lml.as_ref().unwrap().clone();
+        }
+        if e_last_horz.borrow().next_in_lml.is_none() {
+            e_max_pair = self.get_maxima_pair(&e_last_horz);
+        }
+
+        let mut curr_max = self.maxima.clone();
+        if let Some(ref curr_max) = curr_max {
+            if dir == Direction::LeftToRight {
+                while let Some(ref curr_max) = curr_max {
+                    if curr_max.x > horz_edge.borrow().bot.x {
+                        break;
+                    }
+                    curr_max = curr_max.next.clone();
+                }
+                if let Some(ref curr_max) = curr_max {
+                    if curr_max.x >= e_last_horz.borrow().top.x {
+                        curr_max = None;
+                    }
+                }
+            } else {
+                while let Some(ref curr_max) = curr_max.next {
+                    if curr_max.x >= horz_edge.borrow().bot.x {
+                        break;
+                    }
+                    curr_max = curr_max.next.clone();
+                }
+                if let Some(ref curr_max) = curr_max {
+                    if curr_max.x <= e_last_horz.borrow().top.x {
+                        curr_max = None;
+                    }
+                }
+            }
+        }
+
+        let mut op1 = None;
+        loop {
+            let is_last_horz = Rc::ptr_eq(&horz_edge, &e_last_horz);
+            let mut e = self.get_next_in_ael(horz_edge, dir);
+            while let Some(ref e_ref) = e {
+                if let Some(ref curr_max) = curr_max {
+                    if dir == Direction::LeftToRight {
+                        while let Some(ref curr_max) = curr_max {
+                            if curr_max.x >= e_ref.borrow().curr.x {
+                                break;
+                            }
+                            if horz_edge.borrow().out_idx >= 0 && !is_open {
+                                self.add_out_pt(horz_edge, IntPoint::new(curr_max.x, horz_edge.borrow().bot.y));
+                            }
+                            curr_max = curr_max.next.clone();
+                        }
+                    } else {
+                        while let Some(ref curr_max) = curr_max {
+                            if curr_max.x <= e_ref.borrow().curr.x {
+                                break;
+                            }
+                            if horz_edge.borrow().out_idx >= 0 && !is_open {
+                                self.add_out_pt(horz_edge, IntPoint::new(curr_max.x, horz_edge.borrow().bot.y));
+                            }
+                            curr_max = curr_max.prev.clone();
+                        }
+                    }
+                }
+
+                if (dir == Direction::LeftToRight && e_ref.borrow().curr.x > horz_right) || (dir == Direction::RightToLeft && e_ref.borrow().curr.x < horz_left) {
+                    break;
+                }
+
+                if e_ref.borrow().curr.x == horz_edge.borrow().top.x && horz_edge.borrow().next_in_lml.is_some() && e_ref.borrow().dx < horz_edge.borrow().next_in_lml.as_ref().unwrap().borrow().dx {
+                    break;
+                }
+
+                if horz_edge.borrow().out_idx >= 0 && !is_open {
+                    op1 = Some(self.add_out_pt(horz_edge, e_ref.borrow().curr));
+                    let mut e_next_horz = self.sorted_edges.clone();
+                    while let Some(ref e_next_horz) = e_next_horz {
+                        if e_next_horz.borrow().out_idx >= 0 && self.horz_segments_overlap(horz_edge.borrow().bot.x, horz_edge.borrow().top.x, e_next_horz.borrow().bot.x, e_next_horz.borrow().top.x) {
+                            let op2 = self.get_last_out_pt(e_next_horz);
+                            self.add_join(&op2, &op1.as_ref().unwrap(), e_next_horz.borrow().top);
+                        }
+                        e_next_horz = e_next_horz.borrow().next_in_sel.clone();
+                    }
+                    self.add_ghost_join(&op1.as_ref().unwrap(), horz_edge.borrow().bot);
+                }
+
+                if Rc::ptr_eq(e_ref, &e_max_pair.as_ref().unwrap()) && is_last_horz {
+                    if horz_edge.borrow().out_idx >= 0 {
+                        self.add_local_max_poly(horz_edge, &e_max_pair.as_ref().unwrap(), horz_edge.borrow().top);
+                    }
+                    self.base.delete_from_ael(horz_edge);
+                    self.base.delete_from_ael(&e_max_pair.as_ref().unwrap());
+                    return;
+                }
+
+                let pt = IntPoint::new(e_ref.borrow().curr.x, horz_edge.borrow().curr.y);
+                if dir == Direction::LeftToRight {
+                    self.intersect_edges(horz_edge, e_ref, pt);
+                } else {
+                    self.intersect_edges(e_ref, horz_edge, pt);
+                }
+                let e_next = self.get_next_in_ael(e_ref, dir);
+                self.base.swap_positions_in_ael(horz_edge, e_ref);
+                e = e_next;
+            }
+
+            if horz_edge.borrow().next_in_lml.is_none() || !self.base.is_horizontal(&horz_edge.borrow().next_in_lml.as_ref().unwrap().borrow()) {
+                break;
+            }
+
+            self.base.update_edge_into_ael(horz_edge);
+            if horz_edge.borrow().out_idx >= 0 {
+                self.add_out_pt(horz_edge, horz_edge.borrow().bot);
+            }
+            self.get_horz_direction(horz_edge, &mut dir, &mut horz_left, &mut horz_right);
+        }
+
+        if horz_edge.borrow().out_idx >= 0 && op1.is_none() {
+            op1 = Some(self.get_last_out_pt(horz_edge));
+            let mut e_next_horz = self.sorted_edges.clone();
+            while let Some(ref e_next_horz) = e_next_horz {
+                if e_next_horz.borrow().out_idx >= 0 && self.horz_segments_overlap(horz_edge.borrow().bot.x, horz_edge.borrow().top.x, e_next_horz.borrow().bot.x, e_next_horz.borrow().top.x) {
+                    let op2 = self.get_last_out_pt(e_next_horz);
+                    self.add_join(&op2, &op1.as_ref().unwrap(), e_next_horz.borrow().top);
+                }
+                e_next_horz = e_next_horz.borrow().next_in_sel.clone();
+            }
+            self.add_ghost_join(&op1.as_ref().unwrap(), horz_edge.borrow().top);
+        }
+
+        if horz_edge.borrow().next_in_lml.is_some() {
+            if horz_edge.borrow().out_idx >= 0 {
+                op1 = Some(self.add_out_pt(horz_edge, horz_edge.borrow().top));
+                self.base.update_edge_into_ael(horz_edge);
+                if horz_edge.borrow().wind_delta == 0 {
+                    return;
+                }
+                let e_prev = horz_edge.borrow().prev_in_ael.clone();
+                let e_next = horz_edge.borrow().next_in_ael.clone();
+                if let Some(ref e_prev) = e_prev {
+                    if e_prev.borrow().curr.x == horz_edge.borrow().bot.x && e_prev.borrow().curr.y == horz_edge.borrow().bot.y && e_prev.borrow().wind_delta != 0 && e_prev.borrow().out_idx >= 0 && e_prev.borrow().curr.y > e_prev.borrow().top.y && self.base.slopes_equal(&horz_edge.borrow(), &e_prev.borrow(), self.base.use_full_range) {
+                        let op2 = self.add_out_pt(e_prev, horz_edge.borrow().bot);
+                        self.add_join(&op1.as_ref().unwrap(), &op2, horz_edge.borrow().top);
+                    }
+                } else if let Some(ref e_next) = e_next {
+                    if e_next.borrow().curr.x == horz_edge.borrow().bot.x && e_next.borrow().curr.y == horz_edge.borrow().bot.y && e_next.borrow().wind_delta != 0 && e_next.borrow().out_idx >= 0 && e_next.borrow().curr.y > e_next.borrow().top.y && self.base.slopes_equal(&horz_edge.borrow(), &e_next.borrow(), self.base.use_full_range) {
+                        let op2 = self.add_out_pt(e_next, horz_edge.borrow().bot);
+                        self.add_join(&op1.as_ref().unwrap(), &op2, horz_edge.borrow().top);
+                    }
+                }
+            } else {
+                self.base.update_edge_into_ael(horz_edge);
+            }
+        } else {
+            if horz_edge.borrow().out_idx >= 0 {
+                self.add_out_pt(horz_edge, horz_edge.borrow().top);
+            }
+            self.base.delete_from_ael(horz_edge);
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -2743,19 +2915,19 @@ impl ClipperBase {
             let next = edge1.next_in_ael.clone();
             let prev = edge1.prev_in_ael.clone();
             edge1.next_in_ael = edge2.next_in_ael.clone();
-            if let Some(ref next) = edge1.next_in_ael {
+            if let Some(ref next) = edge1.borrow().next_in_ael {
                 next.borrow_mut().prev_in_ael = Some(Rc::new(RefCell::new(edge1.clone())));
             }
             edge1.prev_in_ael = edge2.prev_in_ael.clone();
-            if let Some(ref prev) = edge1.prev_in_ael {
+            if let Some(ref prev) = edge1.borrow().prev_in_ael {
                 prev.borrow_mut().next_in_ael = Some(Rc::new(RefCell::new(edge1.clone())));
             }
             edge2.next_in_ael = next;
-            if let Some(ref next) = edge2.next_in_ael {
+            if let Some(ref next) = edge2.borrow().next_in_ael {
                 next.borrow_mut().prev_in_ael = Some(Rc::new(RefCell::new(edge2.clone())));
             }
             edge2.prev_in_ael = prev;
-            if let Some(ref prev) = edge2.prev_in_ael {
+            if let Some(ref prev) = edge2.borrow().prev_in_ael {
                 prev.borrow_mut().next_in_ael = Some(Rc::new(RefCell::new(edge2.clone())));
             }
         }

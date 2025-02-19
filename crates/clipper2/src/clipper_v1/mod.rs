@@ -3312,6 +3312,24 @@ impl Clipper {
             Self::add_poly_node_to_paths(child, nt, paths);
         }
     }
+
+    /// Extracts open paths from a PolyTree.
+    pub fn open_paths_from_poly_tree(polytree: &PolyTree) -> Paths {
+        let mut result = Paths::with_capacity(polytree.child_count());
+        for child in &polytree.root.childs {
+            if child.is_open {
+                result.push(child.polygon.clone());
+            }
+        }
+        result
+    }
+
+    /// Extracts closed paths from a PolyTree.
+    pub fn closed_paths_from_poly_tree(polytree: &PolyTree) -> Paths {
+        let mut result = Paths::with_capacity(polytree.total());
+        Self::add_poly_node_to_paths(&polytree.root, NodeType::Closed, &mut result);
+        result
+    }
 }
 
 /// Enum representing the type of node.

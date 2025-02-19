@@ -435,7 +435,7 @@ impl Clipper {
         if self.execute_locked {
             return false;
         }
-        if self.has_open_paths {
+        if self.base.has_open_paths {
             panic!("Error: PolyTree struct is needed for open path clipping.");
         }
 
@@ -1586,20 +1586,20 @@ impl Clipper {
             } else {
                 self.add_out_pt(e1, pt);
                 self.add_out_pt(e2, pt);
-                self.swap_sides(e1, e2);
-                self.swap_poly_indexes(e1, e2);
+                Clipper::swap_sides(e1, e2);
+                Clipper::swap_poly_indexes(e1, e2);
             }
         } else if e1_contributing {
             if e2_wc == 0 || e2_wc == 1 {
                 self.add_out_pt(e1, pt);
-                self.swap_sides(e1, e2);
-                self.swap_poly_indexes(e1, e2);
+                Clipper::swap_sides(e1, e2);
+                Clipper::swap_poly_indexes(e1, e2);
             }
         } else if e2_contributing {
             if e1_wc == 0 || e1_wc == 1 {
                 self.add_out_pt(e2, pt);
-                self.swap_sides(e1, e2);
-                self.swap_poly_indexes(e1, e2);
+                Clipper::swap_sides(e1, e2);
+                Clipper::swap_poly_indexes(e1, e2);
             }
         } else if (e1_wc == 0 || e1_wc == 1) && (e2_wc == 0 || e2_wc == 1) {
             let e1_wc2 = match e1_fill_type2 {

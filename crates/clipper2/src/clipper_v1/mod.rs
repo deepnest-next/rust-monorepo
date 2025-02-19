@@ -595,6 +595,25 @@ impl Clipper {
         }
     }
 
+    /// Fixes the hole linkage for an OutRec.
+    fn fix_hole_linkage(&mut self, out_rec: &mut OutRec) {
+        // Skip if an outermost polygon or already points to the correct FirstLeft.
+        if out_rec.first_left.is_none() || 
+           (out_rec.is_hole != out_rec.first_left.as_ref().unwrap().borrow().is_hole &&
+            out_rec.first_left.as_ref().unwrap().borrow().pts.is_some()) {
+            return;
+        }
+
+        let mut orfl = out_rec.first_left.clone();
+        while let Some(ref orfl_ref) = orfl {
+            if orfl_ref.borrow().is_hole != out_rec.is_hole && orfl_ref.borrow().pts.is_some() {
+                break;
+            }
+            orfl = orfl_ref.borrow().first_left.clone();
+        }
+        out_rec.first_left = orfl;
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////

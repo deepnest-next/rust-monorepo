@@ -555,13 +555,75 @@ impl Clipper {
     fn process_edges_at_top_of_scanbeam(&mut self, top_y: CInt) {
         let mut e = self.base.active_edges.clone();
         while let Some(ref edge) = e {
-            if edge.borrow().top.y == top_y {
-                edge.borrow_mut().curr.x = edge.borrow().top.x;
-                edge.borrow_mut().curr.y = edge.borrow().top.y;
-                if edge.borrow().next_in_lml.is_some() {
-                    self.base.update_edge_into_ael(edge);
-                } else {
-                    self.base.delete_from_ael(edge);
+            let is_maxima_edge = self.is_maxima(edge, top_y);
+
+            if is_maxima_edge {
+                let e_max_pair = self.get_maxima_pair_ex(edge);
+                let is_maxima_edge = e_max_pair.is_none() || !ClipperBase::is_horizontal(&e_max_pair.unwrap().borrow());
+
+                if is_maxima_edge {
+                    if self.strictly_simple {
+                        self.insert_maxima(edge.borrow().top.x);
+                    }
+                    let e_prev = edge.borrow().prev_in_ael.clone();
+                    self.do_maxima(edge);
+                    e = if let Some(ref e_prev) = e_prev {
+                        e_prev.borrow().next_in_ael.clone()
+                    } else {
+                        self.base.active_edges.clone()
+                    };
+                    continue;
+                }
+            }
+
+            if self.is_intermediate(edge, top_y) && ClipperBase::is_horizontal(&edge.borrow().next_in_lml.as_ref().unwrap().borrow()) {
+                self.base.update_edge_into_ael(edge);
+                if edge.borrow().out_idx >= 0 {
+                    self.add_out_pt(edge, edge.borrow().bot);
+                }
+                self.add_edge_to_sel(edge);
+            } else {
+                edge.borrow_mut().curr.x = self.top_x(edge, top_y);
+                edge.borrow_mut().curr.y = top_y;
+            }
+
+            if self.strictly_simple {
+                let e_prev = edge.borrow().prev_in_ael.clone();
+                if edge.borrow().out_idx >= 0 && edge.borrow().wind_delta != 0 && e_prev.is_some() && e_prev.as_ref().unwrap().borrow().out_idx >= 0 && e_prev.as_ref().unwrap().borrow().curr.x == edge.borrow().curr.x && e_prev.as_ref().unwrap().borrow().wind_delta != 0 {
+                    let ip = IntPoint::new(edge.borrow().curr.x, edge.borrow().curr.y);
+                    let op = self.add_out_pt(e_prev.as_ref().unwrap(), ip);
+                    let op2 = self.add_out_pt(edge, ip);
+                    self.add_join(op, op2, ip);
+                }
+            }
+
+            e = edge.borrow().next_in_ael.clone();
+        }
+
+        self.process_horizontals();
+        self.maxima = None;
+
+        e = self.base.active_edges.clone();
+        while let Some(ref edge) = e {
+            if self.is_intermediate(edge, top_y) {
+                let mut op = None;
+                if edge.borrow().out_idx >= 0 {
+                    op = Some(self.add_out_pt(edge, edge.borrow().top));
+                }
+                self.base.update_edge_into_ael(edge);
+
+                let e_prev = edge.borrow().prev_in_ael.clone();
+                let e_next = edge.borrow().next_in_ael.clone();
+                if let Some(ref e_prev) = e_prev {
+                    if e_prev.borrow().curr.x == edge.borrow().bot.x && e_prev.borrow().curr.y == edge.borrow().bot.y && op.is_some() && e_prev.borrow().out_idx >= 0 && e_prev.borrow().curr.y > e_prev.borrow().top.y && ClipperBase::slopes_equal(&edge.borrow(), &e_prev.borrow(), self.base.use_full_range) && edge.borrow().wind_delta != 0 && e_prev.borrow().wind_delta != 0 {
+                        let op2 = self.add_out_pt(e_prev, edge.borrow().bot);
+                        self.add_join(op.unwrap(), op2, edge.borrow().top);
+                    }
+                } else if let Some(ref e_next) = e_next {
+                    if e_next.borrow().curr.x == edge.borrow().bot.x && e_next.borrow().curr.y == edge.borrow().bot.y && op.is_some() && e_next.borrow().out_idx >= 0 && e_next.borrow().curr.y > e_next.borrow().top.y && ClipperBase::slopes_equal(&edge.borrow(), &e_next.borrow(), self.base.use_full_range) && edge.borrow().wind_delta != 0 && e_next.borrow().wind_delta != 0 {
+                        let op2 = self.add_out_pt(e_next, edge.borrow().bot);
+                        self.add_join(op.unwrap(), op2, edge.borrow().top);
+                    }
                 }
             }
             e = edge.borrow().next_in_ael.clone();

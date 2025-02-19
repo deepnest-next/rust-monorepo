@@ -1878,6 +1878,103 @@ impl Clipper {
     fn is_intermediate(&self, e: &Rc<RefCell<TEdge>>, y: CInt) -> bool {
         e.borrow().top.y == y && e.borrow().next_in_lml.is_some()
     }
+
+    /// Gets the maxima pair for the given edge.
+    fn get_maxima_pair(&self, e: &Rc<RefCell<TEdge>>) -> Option<Rc<RefCell<TEdge>>> {
+        if e.borrow().next.as_ref().unwrap().borrow().top == e.borrow().top && e.borrow().next.as_ref().unwrap().borrow().next_in_lml.is_none() {
+            Some(e.borrow().next.as_ref().unwrap().clone())
+        } else if e.borrow().prev.as_ref().unwrap().borrow().top == e.borrow().top && e.borrow().prev.as_ref().unwrap().borrow().next_in_lml.is_none() {
+            Some(e.borrow().prev.as_ref().unwrap().clone())
+        } else {
+            None
+        }
+    }
+
+    /// Gets the maxima pair for the given edge, ensuring it is in the active edge list.
+    fn get_maxima_pair_ex(&self, e: &Rc<RefCell<TEdge>>) -> Option<Rc<RefCell<TEdge>>> {
+        let result = self.get_maxima_pair(e);
+        if let Some(ref result) = result {
+            if result.borrow().out_idx == SKIP || (result.borrow().next_in_ael.is_none() && result.borrow().prev_in_ael.is_none() && !self.base.is_horizontal(&result.borrow())) {
+                return None;
+            }
+        }
+        result
+    }
+
+    /// Processes intersections at the given top Y coordinate.
+    fn process_intersections(&mut self, top_y: CInt) -> bool {
+        if self.base.active_edges.is_none() {
+            return true;
+        }
+        // ...existing code...
+        self.build_intersect_list(top_y);
+        if self.intersect_list.is_empty() {
+            return true;
+        }
+        if self.intersect_list.len() == 1 || self.fixup_intersection_order() {
+            self.process_intersect_list();
+        } else {
+            return false;
+        }
+        self.sorted_edges = None;
+        true
+    }
+
+    /// Builds the list of intersections at the given top Y coordinate.
+    fn build_intersect_list(&mut self, top_y: CInt) {
+        if self.base.active_edges.is_none() {
+            return;
+        }
+
+        // Prepare for sorting
+        let mut e = self.base.active_edges.clone();
+        self.sorted_edges = e.clone();
+        while let Some(ref edge) = e {
+            edge.borrow_mut().prev_in_sel = edge.borrow().prev_in_ael.clone();
+            edge.borrow_mut().next_in_sel = edge.borrow().next_in_ael.clone();
+            edge.borrow_mut().curr.x = self.top_x(edge, top_y);
+            e = edge.borrow().next_in_ael.clone();
+        }
+
+        // Bubble sort
+        let mut is_modified = true;
+        while is_modified && self.sorted_edges.is_some() {
+            is_modified = false;
+            e = self.sorted_edges.clone();
+            while let Some(ref edge) = e {
+                if let Some(ref next_edge) = edge.borrow().next_in_sel {
+                    if edge.borrow().curr.x > next_edge.borrow().curr.x {
+                        let mut pt = IntPoint::new(0, 0);
+                        self.intersect_point(edge, next_edge, &mut pt);
+                        if pt.y < top_y {
+                            pt = IntPoint::new(self.top_x(edge, top_y), top_y);
+                        }
+                        let new_node = IntersectNode {
+                            edge1: Some(edge.clone()),
+                            edge2: Some(next_edge.clone()),
+                            pt,
+                        };
+                        self.intersect_list.push(new_node);
+
+                        self.swap_positions_in_sel(edge, next_edge);
+                        is_modified = true;
+                    } else {
+                        e = edge.borrow().next_in_sel.clone();
+                    }
+                } else {
+                    break;
+                }
+            }
+            if let Some(ref edge) = e {
+                if edge.borrow().prev_in_sel.is_some() {
+                    edge.borrow_mut().prev_in_sel.as_ref().unwrap().borrow_mut().next_in_sel = None;
+                } else {
+                    break;
+                }
+            }
+        }
+        self.sorted_edges = None;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

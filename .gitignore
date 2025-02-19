@@ -1,3 +1,4 @@
 /target
 /node_modules
 /*/node_modules
+/crates/clipper2/src/clipper_v1/clipper_v1.cs

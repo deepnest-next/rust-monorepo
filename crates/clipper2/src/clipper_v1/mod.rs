@@ -756,6 +756,31 @@ impl Clipper {
         }
     }
 
+    /// Inserts an edge into the active edge list.
+    fn insert_edge_into_ael(&mut self, edge: &Rc<RefCell<TEdge>>, start_edge: Option<&Rc<RefCell<TEdge>>>) {
+        if self.base.active_edges.is_none() {
+            edge.borrow_mut().prev_in_ael = None;
+            edge.borrow_mut().next_in_ael = None;
+            self.base.active_edges = Some(edge.clone());
+        } else if start_edge.is_none() && self.e2_inserts_before_e1(self.base.active_edges.as_ref().unwrap(), edge) {
+            edge.borrow_mut().prev_in_ael = None;
+            edge.borrow_mut().next_in_ael = self.base.active_edges.clone();
+            self.base.active_edges.as_ref().unwrap().borrow_mut().prev_in_ael = Some(edge.clone());
+            self.base.active_edges = Some(edge.clone());
+        } else {
+            let mut start_edge = start_edge.unwrap_or(self.base.active_edges.as_ref().unwrap()).clone();
+            while start_edge.borrow().next_in_ael.is_some() && !self.e2_inserts_before_e1(start_edge.borrow().next_in_ael.as_ref().unwrap(), edge) {
+                start_edge = start_edge.borrow().next_in_ael.as_ref().unwrap().clone();
+            }
+            edge.borrow_mut().next_in_ael = start_edge.borrow().next_in_ael.clone();
+            if start_edge.borrow().next_in_ael.is_some() {
+                start_edge.borrow().next_in_ael.as_ref().unwrap().borrow_mut().prev_in_ael = Some(edge.clone());
+            }
+            edge.borrow_mut().prev_in_ael = Some(start_edge.clone());
+            start_edge.borrow_mut().next_in_ael = Some(edge.clone());
+        }
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////

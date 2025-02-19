@@ -1975,6 +1975,63 @@ impl Clipper {
         }
         self.sorted_edges = None;
     }
+
+    /// Checks if the edges in the intersect node are adjacent.
+    fn edges_adjacent(&self, inode: &IntersectNode) -> bool {
+        Rc::ptr_eq(&inode.edge1.as_ref().unwrap().borrow().next_in_sel, &inode.edge2)
+            || Rc::ptr_eq(&inode.edge1.as_ref().unwrap().borrow().prev_in_sel, &inode.edge2)
+    }
+
+    /// Sorts intersect nodes by their Y coordinate.
+    fn intersect_node_sort(node1: &IntersectNode, node2: &IntersectNode) -> Ordering {
+        node2.pt.y.cmp(&node1.pt.y)
+    }
+
+    /// Fixes the order of intersections to ensure they are made between adjacent edges.
+    fn fixup_intersection_order(&mut self) -> bool {
+        // Pre-condition: intersections are sorted bottom-most first.
+        // Now it's crucial that intersections are made only between adjacent edges,
+        // so to ensure this the order of intersections may need adjusting.
+        self.intersect_list.sort_by(Clipper::intersect_node_sort);
+
+        self.copy_ael_to_sel();
+        let cnt = self.intersect_list.len();
+        for i in 0..cnt {
+            if !self.edges_adjacent(&self.intersect_list[i]) {
+                let mut j = i + 1;
+                while j < cnt && !self.edges_adjacent(&self.intersect_list[j]) {
+                    j += 1;
+                }
+                if j == cnt {
+                    return false;
+                }
+
+                self.intersect_list.swap(i, j);
+            }
+            self.swap_positions_in_sel(
+                &self.intersect_list[i].edge1.as_ref().unwrap(),
+                &self.intersect_list[i].edge2.as_ref().unwrap(),
+            );
+        }
+        true
+    }
+
+    /// Processes the list of intersections.
+    fn process_intersect_list(&mut self) {
+        for i in 0..self.intersect_list.len() {
+            let i_node = &self.intersect_list[i];
+            self.intersect_edges(
+                &i_node.edge1.as_ref().unwrap(),
+                &i_node.edge2.as_ref().unwrap(),
+                i_node.pt,
+            );
+            self.base.swap_positions_in_ael(
+                &mut i_node.edge1.as_ref().unwrap().borrow_mut(),
+                &mut i_node.edge2.as_ref().unwrap().borrow_mut(),
+            );
+        }
+        self.intersect_list.clear();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

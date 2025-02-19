@@ -2999,6 +2999,43 @@ impl Clipper {
         }
     }
 
+    
+    pub fn area(poly: &Path) -> f64 {
+        let cnt = poly.len();
+        if cnt < 3 {
+            return 0.0;
+        }
+        let mut a = 0.0;
+        let mut j = cnt - 1;
+        for i in 0..cnt {
+            a += (poly[j].x as f64 + poly[i].x as f64) * (poly[j].y as f64 - poly[i].y as f64);
+            j = i;
+        }
+        -a * 0.5
+    }
+
+    fn area_out_rec(&self, out_rec: &OutRec) -> f64 {
+        Clipper::area(out_rec.pts.as_ref().unwrap())
+    }
+
+    fn area_out_pt(&self, op: &OutPt) -> f64 {
+        let op_first = op.clone();
+        if op.is_none() {
+            return 0.0;
+        }
+        let mut a = 0.0;
+        let mut op = op.clone();
+        loop {
+            a += (op.borrow().prev.as_ref().unwrap().borrow().pt.x as f64 + op.borrow().pt.x as f64)
+                * (op.borrow().prev.as_ref().unwrap().borrow().pt.y as f64 - op.borrow().pt.y as f64);
+            op = op.borrow().next.as_ref().unwrap().clone();
+            if Rc::ptr_eq(&op, &op_first) {
+                break;
+            }
+        }
+        a * 0.5
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////

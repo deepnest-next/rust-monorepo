@@ -649,18 +649,43 @@ impl Clipper {
 
     /// Builds the PolyTree output from the internal OutRec structures.
     fn build_result_poly_tree(&mut self, polytree: &mut PolyTree) {
-        // Clear the poly tree and add each valid PolyNode.
         polytree.clear();
-        // For each OutRec, create a corresponding PolyNode and add it to the PolyTree.
+
+        // Add each output polygon/contour to polytree
+        polytree.all_polys.reserve(self.base.poly_outs.len());
         for out_rec in &self.base.poly_outs {
-            if let Some(ref _pts) = out_rec.pts {
-                // Create a new PolyNode and assign its polygon (to be refined).
-                let mut node = PolyNode::new();
-                // A helper that extracts the polygon from the OutRec.
-                // (Implement proper conversion from OutRec to PolyNode.)
-                // Here we simply assign the polygon for demonstration.
-                // node.m_polygon = extract_polygon(out_rec);
-                polytree.root.add_child(node);
+            let cnt = Self::point_count(out_rec.pts.as_ref().unwrap());
+            if (out_rec.is_open && cnt < 2) || (!out_rec.is_open && cnt < 3) {
+                continue;
+            }
+            self.fix_hole_linkage(out_rec);
+            let mut pn = PolyNode::new();
+            polytree.all_polys.push(pn.clone());
+            out_rec.poly_node = Some(pn.clone());
+            pn.polygon.reserve(cnt);
+            let mut op = out_rec.pts.as_ref().unwrap().borrow().prev.as_ref().unwrap().clone();
+            for _ in 0..cnt {
+                pn.polygon.push(op.borrow().pt);
+                op = op.borrow().prev.as_ref().unwrap().clone();
+            }
+        }
+
+        // Fixup PolyNode links etc.
+        polytree.root.childs.reserve(self.base.poly_outs.len());
+        for out_rec in &self.base.poly_outs {
+            if let Some(ref poly_node) = out_rec.poly_node {
+                if out_rec.is_open {
+                    poly_node.is_open = true;
+                    polytree.root.add_child(poly_node.clone());
+                } else if let Some(ref first_left) = out_rec.first_left {
+                    if let Some(ref first_left_poly_node) = first_left.borrow().poly_node {
+                        first_left_poly_node.add_child(poly_node.clone());
+                    } else {
+                        polytree.root.add_child(poly_node.clone());
+                    }
+                } else {
+                    polytree.root.add_child(poly_node.clone());
+                }
             }
         }
     }
@@ -2275,6 +2300,27 @@ impl Clipper {
                 }
                 polyg.push(pg);
             }
+        }
+    }
+
+    /// Fixes up the output polyline by removing duplicate points.
+    fn fixup_out_polyline(&mut self, out_rec: &mut OutRec) {
+        let mut pp = out_rec.pts.as_ref().unwrap().clone();
+        let mut last_pp = pp.borrow().prev.as_ref().unwrap().clone();
+        while !Rc::ptr_eq(&pp, &last_pp) {
+            pp = pp.borrow().next.as_ref().unwrap().clone();
+            if pp.borrow().pt == pp.borrow().prev.as_ref().unwrap().borrow().pt {
+                if Rc::ptr_eq(&pp, &last_pp) {
+                    last_pp = pp.borrow().prev.as_ref().unwrap().clone();
+                }
+                let tmp_pp = pp.borrow().prev.as_ref().unwrap().clone();
+                tmp_pp.borrow_mut().next = pp.borrow().next.clone();
+                pp.borrow().next.as_ref().unwrap().borrow_mut().prev = Some(tmp_pp.clone());
+                pp = tmp_pp;
+            }
+        }
+        if Rc::ptr_eq(&pp, &pp.borrow().prev.as_ref().unwrap()) {
+            out_rec.pts = None;
         }
     }
 }

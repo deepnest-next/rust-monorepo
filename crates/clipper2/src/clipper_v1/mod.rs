@@ -2847,6 +2847,89 @@ impl Clipper {
             }
         }
     }
+
+    fn join_common_edges(&mut self) {
+        for join in &self.joins {
+            let out_rec1 = self.get_out_rec(join.out_pt1.as_ref().unwrap().borrow().idx);
+            let out_rec2 = self.get_out_rec(join.out_pt2.as_ref().unwrap().borrow().idx);
+
+            if out_rec1.borrow().pts.is_none() || out_rec2.borrow().pts.is_none() {
+                continue;
+            }
+            if out_rec1.borrow().is_open || out_rec2.borrow().is_open {
+                continue;
+            }
+
+            let hole_state_rec = if Rc::ptr_eq(&out_rec1, &out_rec2) {
+                out_rec1.clone()
+            } else if self.out_rec1_right_of_out_rec2(&out_rec1, &out_rec2) {
+                out_rec2.clone()
+            } else if self.out_rec1_right_of_out_rec2(&out_rec2, &out_rec1) {
+                out_rec1.clone()
+            } else {
+                self.get_lowermost_rec(&out_rec1, &out_rec2)
+            };
+
+            if !self.join_points(join, &out_rec1.borrow(), &out_rec2.borrow()) {
+                continue;
+            }
+
+            if Rc::ptr_eq(&out_rec1, &out_rec2) {
+                out_rec1.borrow_mut().pts = Some(join.out_pt1.clone().unwrap());
+                out_rec1.borrow_mut().bottom_pt = None;
+                let mut out_rec2 = self.base.create_out_rec();
+                out_rec2.pts = Some(join.out_pt2.clone().unwrap());
+                self.update_out_pt_idxs(&out_rec2);
+
+                if Clipper::poly2_contains_poly1(out_rec2.pts.as_ref().unwrap(), out_rec1.borrow().pts.as_ref().unwrap()) {
+                    out_rec2.is_hole = !out_rec1.borrow().is_hole;
+                    out_rec2.first_left = Some(out_rec1.clone());
+
+                    if self.using_poly_tree {
+                        self.fixup_first_lefts2(&out_rec2, &out_rec1);
+                    }
+
+                    if (out_rec2.is_hole ^ self.reverse_solution) == (self.area(&out_rec2) > 0.0) {
+                        self.reverse_poly_pt_links(out_rec2.pts.as_ref().unwrap());
+                    }
+                } else if Clipper::poly2_contains_poly1(out_rec1.borrow().pts.as_ref().unwrap(), out_rec2.pts.as_ref().unwrap()) {
+                    out_rec2.is_hole = out_rec1.borrow().is_hole;
+                    out_rec1.borrow_mut().is_hole = !out_rec2.is_hole;
+                    out_rec2.first_left = out_rec1.borrow().first_left.clone();
+                    out_rec1.borrow_mut().first_left = Some(out_rec2.clone());
+
+                    if self.using_poly_tree {
+                        self.fixup_first_lefts2(&out_rec1, &out_rec2);
+                    }
+
+                    if (out_rec1.borrow().is_hole ^ self.reverse_solution) == (self.area(&out_rec1) > 0.0) {
+                        self.reverse_poly_pt_links(out_rec1.borrow().pts.as_ref().unwrap());
+                    }
+                } else {
+                    out_rec2.is_hole = out_rec1.borrow().is_hole;
+                    out_rec2.first_left = out_rec1.borrow().first_left.clone();
+
+                    if self.using_poly_tree {
+                        self.fixup_first_lefts1(&out_rec1, &out_rec2);
+                    }
+                }
+            } else {
+                out_rec2.borrow_mut().pts = None;
+                out_rec2.borrow_mut().bottom_pt = None;
+                out_rec2.borrow_mut().idx = out_rec1.borrow().idx;
+
+                out_rec1.borrow_mut().is_hole = hole_state_rec.borrow().is_hole;
+                if Rc::ptr_eq(&hole_state_rec, &out_rec2) {
+                    out_rec1.borrow_mut().first_left = out_rec2.borrow().first_left.clone();
+                }
+                out_rec2.borrow_mut().first_left = Some(out_rec1.clone());
+
+                if self.using_poly_tree {
+                    self.fixup_first_lefts3(&out_rec2, &out_rec1);
+                }
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -2686,6 +2686,101 @@ impl Clipper {
             }
         }
     }
+
+    pub fn point_in_polygon(pt: IntPoint, path: &Path) -> i32 {
+        // Returns 0 if false, +1 if true, -1 if pt ON polygon boundary
+        // See "The Point in Polygon Problem for Arbitrary Polygons" by Hormann & Agathos
+        // http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.88.5498&rep=rep1&type=pdf
+        let mut result = 0;
+        let cnt = path.len();
+        if cnt < 3 {
+            return 0;
+        }
+        let mut ip = path[0];
+        for i in 1..=cnt {
+            let ip_next = if i == cnt { path[0] } else { path[i] };
+            if ip_next.y == pt.y {
+                if ip_next.x == pt.x || (ip.y == pt.y && (ip_next.x > pt.x) == (ip.x < pt.x)) {
+                    return -1;
+                }
+            }
+            if (ip.y < pt.y) != (ip_next.y < pt.y) {
+                if ip.x >= pt.x {
+                    if ip_next.x > pt.x {
+                        result = 1 - result;
+                    } else {
+                        let d = (ip.x - pt.x) as f64 * (ip_next.y - pt.y) as f64
+                            - (ip_next.x - pt.x) as f64 * (ip.y - pt.y) as f64;
+                        if d == 0.0 {
+                            return -1;
+                        } else if (d > 0.0) == (ip_next.y > ip.y) {
+                            result = 1 - result;
+                        }
+                    }
+                } else if ip_next.x > pt.x {
+                    let d = (ip.x - pt.x) as f64 * (ip_next.y - pt.y) as f64
+                        - (ip_next.x - pt.x) as f64 * (ip.y - pt.y) as f64;
+                    if d == 0.0 {
+                        return -1;
+                    } else if (d > 0.0) == (ip_next.y > ip.y) {
+                        result = 1 - result;
+                    }
+                }
+            }
+            ip = ip_next;
+        }
+        result
+    }
+
+    fn point_in_polygon_out_pt(pt: IntPoint, op: &OutPt) -> i32 {
+        // Returns 0 if false, +1 if true, -1 if pt ON polygon boundary
+        let mut result = 0;
+        let start_op = op.clone();
+        let ptx = pt.x;
+        let pty = pt.y;
+        let mut poly0x = op.pt.x;
+        let mut poly0y = op.pt.y;
+        let mut op = op.next.as_ref().unwrap().clone();
+        loop {
+            let poly1x = op.pt.x;
+            let poly1y = op.pt.y;
+            if poly1y == pty {
+                if poly1x == ptx || (poly0y == pty && (poly1x > ptx) == (poly0x < ptx)) {
+                    return -1;
+                }
+            }
+            if (poly0y < pty) != (poly1y < pty) {
+                if poly0x >= ptx {
+                    if poly1x > ptx {
+                        result = 1 - result;
+                    } else {
+                        let d = (poly0x - ptx) as f64 * (poly1y - pty) as f64
+                            - (poly1x - ptx) as f64 * (poly0y - pty) as f64;
+                        if d == 0.0 {
+                            return -1;
+                        } else if (d > 0.0) == (poly1y > poly0y) {
+                            result = 1 - result;
+                        }
+                    }
+                } else if poly1x > ptx {
+                    let d = (poly0x - ptx) as f64 * (poly1y - pty) as f64
+                        - (poly1x - ptx) as f64 * (poly0y - pty) as f64;
+                    if d == 0.0 {
+                        return -1;
+                    } else if (d > 0.0) == (poly1y > poly0y) {
+                        result = 1 - result;
+                    }
+                }
+            }
+            poly0x = poly1x;
+            poly0y = poly1y;
+            op = op.next.as_ref().unwrap().clone();
+            if Rc::ptr_eq(&op, &start_op) {
+                break;
+            }
+        }
+        result
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

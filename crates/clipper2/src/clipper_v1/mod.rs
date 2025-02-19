@@ -1160,6 +1160,65 @@ impl Clipper {
         }
         result
     }
+
+    /// Adds an output point to the polygon.
+    fn add_out_pt(&mut self, e: &Rc<RefCell<TEdge>>, pt: IntPoint) -> Rc<RefCell<OutPt>> {
+        if e.borrow().out_idx < 0 {
+            let mut out_rec = self.base.create_out_rec();
+            out_rec.is_open = e.borrow().wind_delta == 0;
+            let new_op = Rc::new(RefCell::new(OutPt {
+                idx: out_rec.idx,
+                pt,
+                next: None,
+                prev: None,
+            }));
+            out_rec.pts = Some(new_op.clone());
+            new_op.borrow_mut().next = Some(new_op.clone());
+            new_op.borrow_mut().prev = Some(new_op.clone());
+            if !out_rec.is_open {
+                self.set_hole_state(e, &mut out_rec);
+            }
+            e.borrow_mut().out_idx = out_rec.idx;
+            return new_op;
+        } else {
+            let out_rec = &self.base.poly_outs[e.borrow().out_idx as usize];
+            let op = out_rec.pts.as_ref().unwrap();
+            let to_front = e.borrow().side == EdgeSide::Left;
+            if to_front && pt == op.borrow().pt {
+                return op.clone();
+            } else if !to_front && pt == op.borrow().prev.as_ref().unwrap().borrow().pt {
+                return op.borrow().prev.as_ref().unwrap().clone();
+            }
+
+            let new_op = Rc::new(RefCell::new(OutPt {
+                idx: out_rec.idx,
+                pt,
+                next: Some(op.clone()),
+                prev: op.borrow().prev.clone(),
+            }));
+            new_op.borrow().prev.as_ref().unwrap().borrow_mut().next = Some(new_op.clone());
+            op.borrow_mut().prev = Some(new_op.clone());
+            if to_front {
+                out_rec.pts = Some(new_op.clone());
+            }
+            return new_op;
+        }
+    }
+
+    /// Gets the last output point of the edge.
+    fn get_last_out_pt(&self, e: &Rc<RefCell<TEdge>>) -> Rc<RefCell<OutPt>> {
+        let out_rec = &self.base.poly_outs[e.borrow().out_idx as usize];
+        if e.borrow().side == EdgeSide::Left {
+            out_rec.pts.as_ref().unwrap().clone()
+        } else {
+            out_rec.pts.as_ref().unwrap().borrow().prev.as_ref().unwrap().clone()
+        }
+    }
+
+    /// Swaps two points.
+    fn swap_points(pt1: &mut IntPoint, pt2: &mut IntPoint) {
+        std::mem::swap(pt1, pt2);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -551,6 +551,23 @@ impl Clipper {
         true
     }
 
+    /// Processes edges at the top of the scanbeam.
+    fn process_edges_at_top_of_scanbeam(&mut self, top_y: CInt) {
+        let mut e = self.base.active_edges.clone();
+        while let Some(ref edge) = e {
+            if edge.borrow().top.y == top_y {
+                edge.borrow_mut().curr.x = edge.borrow().top.x;
+                edge.borrow_mut().curr.y = edge.borrow().top.y;
+                if edge.borrow().next_in_lml.is_some() {
+                    self.base.update_edge_into_ael(edge);
+                } else {
+                    self.base.delete_from_ael(edge);
+                }
+            }
+            e = edge.borrow().next_in_ael.clone();
+        }
+    }
+
     /// Builds the final solution paths from the internal OutRec structures.
     fn build_result(&mut self, solution: &mut Paths) {
         // Clear the solution and fill it based on the poly_outs stored in base.
@@ -785,9 +802,9 @@ impl Clipper {
     fn e2_inserts_before_e1(&self, e1: &Rc<RefCell<TEdge>>, e2: &Rc<RefCell<TEdge>>) -> bool {
         if e2.borrow().curr.x == e1.borrow().curr.x {
             if e2.borrow().top.y > e1.borrow().top.y {
-                e2.borrow().top.x < self.top_x(e1, e2.borrow().top.y)
+                e2.borrow().top.x < Clipper::top_x(e1, e2.borrow().top.y)
             } else {
-                e1.borrow().top.x > self.top_x(e2, e1.borrow().top.y)
+                e1.borrow().top.x > Clipper::top_x(e2, e1.borrow().top.y)
             }
         } else {
             e2.borrow().curr.x < e1.borrow().curr.x
@@ -795,7 +812,7 @@ impl Clipper {
     }
 
     /// Calculates the top X coordinate of an edge at a given Y coordinate.
-    fn top_x(&self, edge: &Rc<RefCell<TEdge>>, current_y: CInt) -> CInt {
+    fn top_x(edge: &Rc<RefCell<TEdge>>, current_y: CInt) -> CInt {
         if current_y == edge.borrow().top.y {
             edge.borrow().top.x
         } else {
@@ -2019,18 +2036,88 @@ impl Clipper {
     /// Processes the list of intersections.
     fn process_intersect_list(&mut self) {
         for i in 0..self.intersect_list.len() {
-            let i_node = &self.intersect_list[i];
-            self.intersect_edges(
-                &i_node.edge1.as_ref().unwrap(),
-                &i_node.edge2.as_ref().unwrap(),
-                i_node.pt,
-            );
+            let i_node = self.intersect_list[i].clone();
+            let edge1 = i_node.edge1.unwrap();
+            let edge2 = i_node.edge2.unwrap();
+            let pt = i_node.pt;
+            self.intersect_edges(&edge1, &edge2, pt);
             self.base.swap_positions_in_ael(
                 &mut i_node.edge1.as_ref().unwrap().borrow_mut(),
                 &mut i_node.edge2.as_ref().unwrap().borrow_mut(),
             );
         }
         self.intersect_list.clear();
+    }
+
+    /// Rounds a floating-point value to the nearest integer.
+    fn round(value: f64) -> CInt {
+        if value < 0.0 {
+            (value - 0.5).floor() as CInt
+        } else {
+            (value + 0.5).floor() as CInt
+        }
+    }
+
+    /// Calculates the intersection point of two edges.
+    fn intersect_point(edge1: &TEdge, edge2: &TEdge) -> IntPoint {
+        let mut ip = IntPoint::new(0, 0);
+        if edge1.dx == edge2.dx {
+            ip.y = edge1.curr.y;
+            ip.x = Clipper::top_x(&Rc::new(RefCell::new(edge1.clone())), ip.y);
+            return ip;
+        }
+
+        if edge1.delta.x == 0 {
+            ip.x = edge1.bot.x;
+            if ClipperBase::is_horizontal(edge2) {
+                ip.y = edge2.bot.y;
+            } else {
+                let b2 = edge2.bot.y as f64 - (edge2.bot.x as f64 / edge2.dx);
+                ip.y = Clipper::round(ip.x as f64 / edge2.dx + b2);
+            }
+        } else if edge2.delta.x == 0 {
+            ip.x = edge2.bot.x;
+            if ClipperBase::is_horizontal(edge1) {
+                ip.y = edge1.bot.y;
+            } else {
+                let b1 = edge1.bot.y as f64 - (edge1.bot.x as f64 / edge1.dx);
+                ip.y = Clipper::round(ip.x as f64 / edge1.dx + b1);
+            }
+        } else {
+            let b1 = edge1.bot.x as f64 - edge1.bot.y as f64 * edge1.dx;
+            let b2 = edge2.bot.x as f64 - edge2.bot.y as f64 * edge2.dx;
+            let q = (b2 - b1) / (edge1.dx - edge2.dx);
+            ip.y = Clipper::round(q);
+            if edge1.dx.abs() < edge2.dx.abs() {
+                ip.x = Clipper::round(edge1.dx * q + b1);
+            } else {
+                ip.x = Clipper::round(edge2.dx * q + b2);
+            }
+        }
+
+        if ip.y < edge1.top.y || ip.y < edge2.top.y {
+            if edge1.top.y > edge2.top.y {
+                ip.y = edge1.top.y;
+            } else {
+                ip.y = edge2.top.y;
+            }
+            if edge1.dx.abs() < edge2.dx.abs() {
+                ip.x = Clipper::top_x(edge1, ip.y);
+            } else {
+                ip.x = Clipper::top_x(edge2, ip.y);
+            }
+        }
+
+        if ip.y > edge1.curr.y {
+            ip.y = edge1.curr.y;
+            if edge1.dx.abs() > edge2.dx.abs() {
+                ip.x = Clipper::top_x(edge2, ip.y);
+            } else {
+                ip.x = Clipper::top_x(edge1, ip.y);
+            }
+        }
+
+        ip
     }
 }
 
@@ -2446,7 +2533,7 @@ impl TEdge {
 // IntersectNode
 ///////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IntersectNode {
     // Using shared pointers for edges so that an edge can appear in multiple lists.
     pub edge1: Option<Rc<RefCell<TEdge>>>,

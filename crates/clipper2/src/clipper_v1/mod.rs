@@ -1028,6 +1028,138 @@ impl Clipper {
             None
         }
     }
+
+    /// Copies the active edge list (AEL) to the sorted edge list (SEL).
+    fn copy_ael_to_sel(&mut self) {
+        let mut e = self.base.active_edges.clone();
+        self.sorted_edges = e.clone();
+        while let Some(ref edge) = e {
+            edge.borrow_mut().prev_in_sel = edge.borrow().prev_in_ael.clone();
+            edge.borrow_mut().next_in_sel = edge.borrow().next_in_ael.clone();
+            e = edge.borrow().next_in_ael.clone();
+        }
+    }
+
+    /// Swaps positions of two edges in the sorted edge list (SEL).
+    fn swap_positions_in_sel(&mut self, edge1: &Rc<RefCell<TEdge>>, edge2: &Rc<RefCell<TEdge>>) {
+        if edge1.borrow().next_in_sel.is_none() && edge1.borrow().prev_in_sel.is_none() {
+            return;
+        }
+        if edge2.borrow().next_in_sel.is_none() && edge2.borrow().prev_in_sel.is_none() {
+            return;
+        }
+
+        if Rc::ptr_eq(&edge1.borrow().next_in_sel, &Some(edge2.clone())) {
+            let next = edge2.borrow().next_in_sel.clone();
+            if let Some(ref next) = next {
+                next.borrow_mut().prev_in_sel = Some(edge1.clone());
+            }
+            let prev = edge1.borrow().prev_in_sel.clone();
+            if let Some(ref prev) = prev {
+                prev.borrow_mut().next_in_sel = Some(edge2.clone());
+            }
+            edge2.borrow_mut().prev_in_sel = prev;
+            edge2.borrow_mut().next_in_sel = Some(edge1.clone());
+            edge1.borrow_mut().prev_in_sel = Some(edge2.clone());
+            edge1.borrow_mut().next_in_sel = next;
+        } else if Rc::ptr_eq(&edge2.borrow().next_in_sel, &Some(edge1.clone())) {
+            let next = edge1.borrow().next_in_sel.clone();
+            if let Some(ref next) = next {
+                next.borrow_mut().prev_in_sel = Some(edge2.clone());
+            }
+            let prev = edge2.borrow().prev_in_sel.clone();
+            if let Some(ref prev) = prev {
+                prev.borrow_mut().next_in_sel = Some(edge1.clone());
+            }
+            edge1.borrow_mut().prev_in_sel = prev;
+            edge1.borrow_mut().next_in_sel = Some(edge2.clone());
+            edge2.borrow_mut().prev_in_sel = Some(edge1.clone());
+            edge2.borrow_mut().next_in_sel = next;
+        } else {
+            let next = edge1.borrow().next_in_sel.clone();
+            let prev = edge1.borrow().prev_in_sel.clone();
+            edge1.borrow_mut().next_in_sel = edge2.borrow().next_in_sel.clone();
+            if let Some(ref next) = edge1.borrow().next_in_sel {
+                next.borrow_mut().prev_in_sel = Some(edge1.clone());
+            }
+            edge1.borrow_mut().prev_in_sel = edge2.borrow().prev_in_sel.clone();
+            if let Some(ref prev) = edge1.borrow().prev_in_sel {
+                prev.borrow_mut().next_in_sel = Some(edge1.clone());
+            }
+            edge2.borrow_mut().next_in_sel = next;
+            if let Some(ref next) = edge2.borrow().next_in_sel {
+                next.borrow_mut().prev_in_sel = Some(edge2.clone());
+            }
+            edge2.borrow_mut().prev_in_sel = prev;
+            if let Some(ref prev) = edge2.borrow().prev_in_sel {
+                prev.borrow_mut().next_in_sel = Some(edge2.clone());
+            }
+        }
+
+        if edge1.borrow().prev_in_sel.is_none() {
+            self.sorted_edges = Some(edge1.clone());
+        } else if edge2.borrow().prev_in_sel.is_none() {
+            self.sorted_edges = Some(edge2.clone());
+        }
+    }
+
+    /// Adds a local maximum polygon.
+    fn add_local_max_poly(&mut self, e1: &Rc<RefCell<TEdge>>, e2: &Rc<RefCell<TEdge>>, pt: IntPoint) {
+        self.add_out_pt(e1, pt);
+        if e2.borrow().wind_delta == 0 {
+            self.add_out_pt(e2, pt);
+        }
+        if e1.borrow().out_idx == e2.borrow().out_idx {
+            e1.borrow_mut().out_idx = UNASSIGNED;
+            e2.borrow_mut().out_idx = UNASSIGNED;
+        } else if e1.borrow().out_idx < e2.borrow().out_idx {
+            self.append_polygon(e1, e2);
+        } else {
+            self.append_polygon(e2, e1);
+        }
+    }
+
+    /// Adds a local minimum polygon.
+    fn add_local_min_poly(&mut self, e1: &Rc<RefCell<TEdge>>, e2: &Rc<RefCell<TEdge>>, pt: IntPoint) -> Rc<RefCell<OutPt>> {
+        let result;
+        let e;
+        let prev_e;
+        if self.base.is_horizontal(&e2.borrow()) || e1.borrow().dx > e2.borrow().dx {
+            result = self.add_out_pt(e1, pt);
+            e2.borrow_mut().out_idx = e1.borrow().out_idx;
+            e1.borrow_mut().side = EdgeSide::Left;
+            e2.borrow_mut().side = EdgeSide::Right;
+            e = e1.clone();
+            if Rc::ptr_eq(&e.borrow().prev_in_ael, &e2) {
+                prev_e = e2.borrow().prev_in_ael.clone();
+            } else {
+                prev_e = e.borrow().prev_in_ael.clone();
+            }
+        } else {
+            result = self.add_out_pt(e2, pt);
+            e1.borrow_mut().out_idx = e2.borrow().out_idx;
+            e1.borrow_mut().side = EdgeSide::Right;
+            e2.borrow_mut().side = EdgeSide::Left;
+            e = e2.clone();
+            if Rc::ptr_eq(&e.borrow().prev_in_ael, &e1) {
+                prev_e = e1.borrow().prev_in_ael.clone();
+            } else {
+                prev_e = e.borrow().prev_in_ael.clone();
+            }
+        }
+
+        if let Some(ref prev_e) = prev_e {
+            if prev_e.borrow().out_idx >= 0 && prev_e.borrow().top.y < pt.y && e.borrow().top.y < pt.y {
+                let x_prev = self.top_x(prev_e, pt.y);
+                let x_e = self.top_x(&e, pt.y);
+                if x_prev == x_e && e.borrow().wind_delta != 0 && prev_e.borrow().wind_delta != 0 && self.base.slopes_equal_points(IntPoint::new(x_prev, pt.y), prev_e.borrow().top, IntPoint::new(x_e, pt.y), e.borrow().top, self.base.use_full_range) {
+                    let out_pt = self.add_out_pt(prev_e, pt);
+                    self.add_join(&result, &out_pt, e.borrow().top);
+                }
+            }
+        }
+        result
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

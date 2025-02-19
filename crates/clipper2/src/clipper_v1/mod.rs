@@ -1475,6 +1475,20 @@ impl Clipper {
             }
         }
     }
+
+    /// Swaps the sides of two edges.
+    fn swap_sides(edge1: &Rc<RefCell<TEdge>>, edge2: &Rc<RefCell<TEdge>>) {
+        let side = edge1.borrow().side;
+        edge1.borrow_mut().side = edge2.borrow().side;
+        edge2.borrow_mut().side = side;
+    }
+
+    /// Swaps the polygon indexes of two edges.
+    fn swap_poly_indexes(edge1: &Rc<RefCell<TEdge>>, edge2: &Rc<RefCell<TEdge>>) {
+        let out_idx = edge1.borrow().out_idx;
+        edge1.borrow_mut().out_idx = edge2.borrow().out_idx;
+        edge2.borrow_mut().out_idx = out_idx;
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

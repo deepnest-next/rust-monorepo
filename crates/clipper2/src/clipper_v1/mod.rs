@@ -3248,6 +3248,38 @@ impl Clipper {
         }
         quads
     }
+
+    /// Computes the Minkowski sum for a single subject path.
+    pub fn minkowski_sum(pattern: &Path, path: &Path, path_is_closed: bool) -> Paths {
+        let mut paths = Self::minkowski(pattern, path, true, path_is_closed);
+        let mut c = Clipper::new(0);
+        c.add_paths(&paths, PolyType::Subject, true);
+        let _ = c.execute(ClipType::Union, &mut paths, PolyFillType::NonZero, PolyFillType::NonZero);
+        paths
+    }
+
+    /// Translates a path by the given delta.
+    fn translate_path(path: &Path, delta: &IntPoint) -> Path {
+        path.iter()
+            .map(|pt| IntPoint::new(pt.x + delta.x, pt.y + delta.y))
+            .collect()
+    }
+
+    /// Computes the Minkowski sum for multiple subject paths.
+    pub fn minkowski_sum_paths(pattern: &Path, paths: &Paths, path_is_closed: bool) -> Paths {
+        let mut solution: Paths = Vec::new();
+        let mut c = Clipper::new(0);
+        for path in paths {
+            let tmp = Self::minkowski(pattern, path, true, path_is_closed);
+            c.add_paths(&tmp, PolyType::Subject, true);
+            if path_is_closed {
+                let translated = Self::translate_path(path, &pattern[0]);
+                c.add_path(&translated, PolyType::Clip, true);
+            }
+        }
+        let _ = c.execute(ClipType::Union, &mut solution, PolyFillType::NonZero, PolyFillType::NonZero);
+        solution
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -820,6 +820,77 @@ impl Clipper {
             self.subj_fill_type == PolyFillType::EvenOdd
         }
     }
+
+    /// Determines if the edge is contributing to the final solution.
+    fn is_contributing(&self, edge: &TEdge) -> bool {
+        let (pft, pft2) = if edge.poly_typ == PolyType::Subject {
+            (self.subj_fill_type, self.clip_fill_type)
+        } else {
+            (self.clip_fill_type, self.subj_fill_type)
+        };
+
+        match pft {
+            PolyFillType::EvenOdd => {
+                if edge.wind_delta == 0 && edge.wind_cnt != 1 {
+                    return false;
+                }
+            }
+            PolyFillType::NonZero => {
+                if edge.wind_cnt.abs() != 1 {
+                    return false;
+                }
+            }
+            PolyFillType::Positive => {
+                if edge.wind_cnt != 1 {
+                    return false;
+                }
+            }
+            PolyFillType::Negative => {
+                if edge.wind_cnt != -1 {
+                    return false;
+                }
+            }
+        }
+
+        match self.clip_type {
+            ClipType::Intersection => match pft2 {
+                PolyFillType::EvenOdd | PolyFillType::NonZero => edge.wind_cnt2 != 0,
+                PolyFillType::Positive => edge.wind_cnt2 > 0,
+                PolyFillType::Negative => edge.wind_cnt2 < 0,
+            },
+            ClipType::Union => match pft2 {
+                PolyFillType::EvenOdd | PolyFillType::NonZero => edge.wind_cnt2 == 0,
+                PolyFillType::Positive => edge.wind_cnt2 <= 0,
+                PolyFillType::Negative => edge.wind_cnt2 >= 0,
+            },
+            ClipType::Difference => {
+                if edge.poly_typ == PolyType::Subject {
+                    match pft2 {
+                        PolyFillType::EvenOdd | PolyFillType::NonZero => edge.wind_cnt2 == 0,
+                        PolyFillType::Positive => edge.wind_cnt2 <= 0,
+                        PolyFillType::Negative => edge.wind_cnt2 >= 0,
+                    }
+                } else {
+                    match pft2 {
+                        PolyFillType::EvenOdd | PolyFillType::NonZero => edge.wind_cnt2 != 0,
+                        PolyFillType::Positive => edge.wind_cnt2 > 0,
+                        PolyFillType::Negative => edge.wind_cnt2 < 0,
+                    }
+                }
+            }
+            ClipType::Xor => {
+                if edge.wind_delta == 0 {
+                    match pft2 {
+                        PolyFillType::EvenOdd | PolyFillType::NonZero => edge.wind_cnt2 == 0,
+                        PolyFillType::Positive => edge.wind_cnt2 <= 0,
+                        PolyFillType::Negative => edge.wind_cnt2 >= 0,
+                    }
+                } else {
+                    true
+                }
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

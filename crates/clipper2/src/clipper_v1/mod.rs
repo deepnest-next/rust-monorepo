@@ -3208,6 +3208,46 @@ impl Clipper {
          }
          result
     }
+
+    /// Constructs Minkowski sum/difference polygons.
+    pub fn minkowski(pattern: &Path, path: &Path, is_sum: bool, is_closed: bool) -> Paths {
+        let delta = if is_closed { 1 } else { 0 };
+        let poly_cnt = pattern.len();
+        let path_cnt = path.len();
+        let mut result: Paths = Vec::with_capacity(path_cnt);
+        if is_sum {
+            for p in path {
+                let mut new_path = Vec::with_capacity(poly_cnt);
+                for ip in pattern {
+                    new_path.push(IntPoint::new(p.x + ip.x, p.y + ip.y));
+                }
+                result.push(new_path);
+            }
+        } else {
+            for p in path {
+                let mut new_path = Vec::with_capacity(poly_cnt);
+                for ip in pattern {
+                    new_path.push(IntPoint::new(p.x - ip.x, p.y - ip.y));
+                }
+                result.push(new_path);
+            }
+        }
+        let mut quads: Paths = Vec::with_capacity((path_cnt + delta) * (poly_cnt + 1));
+        for i in 0..(path_cnt - 1 + delta) {
+            for j in 0..poly_cnt {
+                let mut quad = Vec::with_capacity(4);
+                quad.push(result[i % path_cnt][j % poly_cnt]);
+                quad.push(result[(i + 1) % path_cnt][j % poly_cnt]);
+                quad.push(result[(i + 1) % path_cnt][(j + 1) % poly_cnt]);
+                quad.push(result[i % path_cnt][(j + 1) % poly_cnt]);
+                if !Self::orientation(&quad) {
+                    quad.reverse();
+                }
+                quads.push(quad);
+            }
+        }
+        quads
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

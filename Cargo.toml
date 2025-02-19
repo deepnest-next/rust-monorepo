@@ -6,6 +6,7 @@ members = [
     "crates/geometry-utils",
     "crates/node-clipper2",
     "crates/node-svg-preprocessor",
+    "crates/babushka",
 ]
 
 [workspace.package]

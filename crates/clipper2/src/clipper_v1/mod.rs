@@ -3015,7 +3015,20 @@ impl Clipper {
     }
 
     fn area_out_rec(&self, out_rec: &OutRec) -> f64 {
-        Clipper::area(out_rec.pts.as_ref().unwrap())
+        Clipper::area(&self.convert_out_pt_to_path(out_rec.pts.as_ref().unwrap()))
+    }
+    
+    fn convert_out_pt_to_path(&self, out_pt: &Rc<RefCell<OutPt>>) -> Path {
+        let mut path = Vec::new();
+        let mut current = out_pt.clone();
+        loop {
+            path.push(current.borrow().pt);
+            current = current.borrow().next.as_ref().unwrap().clone();
+            if Rc::ptr_eq(&current, out_pt) {
+                break;
+            }
+        }
+        path
     }
 
     fn area_out_pt(&self, op: &OutPt) -> f64 {

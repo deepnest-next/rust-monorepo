@@ -1265,6 +1265,73 @@ impl Clipper {
             (pt2.x - pt1.x) as f64 / (pt2.y - pt1.y) as f64
         }
     }
+
+    /// Determines if the first bottom point is the bottom-most point.
+    fn first_is_bottom_pt(&self, btm_pt1: &Rc<RefCell<OutPt>>, btm_pt2: &Rc<RefCell<OutPt>>) -> bool {
+        let mut p = btm_pt1.borrow().prev.clone().unwrap();
+        while p.borrow().pt == btm_pt1.borrow().pt && !Rc::ptr_eq(&p, btm_pt1) {
+            p = p.borrow().prev.clone().unwrap();
+        }
+        let dx1p = (Self::get_dx(btm_pt1.borrow().pt, p.borrow().pt)).abs();
+        p = btm_pt1.borrow().next.clone().unwrap();
+        while p.borrow().pt == btm_pt1.borrow().pt && !Rc::ptr_eq(&p, btm_pt1) {
+            p = p.borrow().next.clone().unwrap();
+        }
+        let dx1n = (Self::get_dx(btm_pt1.borrow().pt, p.borrow().pt)).abs();
+
+        p = btm_pt2.borrow().prev.clone().unwrap();
+        while p.borrow().pt == btm_pt2.borrow().pt && !Rc::ptr_eq(&p, btm_pt2) {
+            p = p.borrow().prev.clone().unwrap();
+        }
+        let dx2p = (Self::get_dx(btm_pt2.borrow().pt, p.borrow().pt)).abs();
+        p = btm_pt2.borrow().next.clone().unwrap();
+        while p.borrow().pt == btm_pt2.borrow().pt && !Rc::ptr_eq(&p, btm_pt2) {
+            p = p.borrow().next.clone().unwrap();
+        }
+        let dx2n = (Self::get_dx(btm_pt2.borrow().pt, p.borrow().pt)).abs();
+
+        if dx1p.max(dx1n) == dx2p.max(dx2n) && dx1p.min(dx1n) == dx2p.min(dx2n) {
+            self.area(btm_pt1) > 0.0 // if otherwise identical use orientation
+        } else {
+            (dx1p >= dx2p && dx1p >= dx2n) || (dx1n >= dx2p && dx1n >= dx2n)
+        }
+    }
+
+    /// Gets the bottom-most point of the polygon.
+    fn get_bottom_pt(&self, pp: &Rc<RefCell<OutPt>>) -> Rc<RefCell<OutPt>> {
+        let mut pp = pp.clone();
+        let mut dups: Option<Rc<RefCell<OutPt>>> = None;
+        let mut p = pp.borrow().next.clone().unwrap();
+        while !Rc::ptr_eq(&p, &pp) {
+            if p.borrow().pt.y > pp.borrow().pt.y {
+                pp = p.clone();
+                dups = None;
+            } else if p.borrow().pt.y == pp.borrow().pt.y && p.borrow().pt.x <= pp.borrow().pt.x {
+                if p.borrow().pt.x < pp.borrow().pt.x {
+                    dups = None;
+                    pp = p.clone();
+                } else {
+                    if !Rc::ptr_eq(&p.borrow().next.clone().unwrap(), &pp) && !Rc::ptr_eq(&p.borrow().prev.clone().unwrap(), &pp) {
+                        dups = Some(p.clone());
+                    }
+                }
+            }
+            p = p.borrow().next.clone().unwrap();
+        }
+        if let Some(mut dups) = dups {
+            // there appears to be at least 2 vertices at bottomPt so ...
+            while !Rc::ptr_eq(&dups, &p) {
+                if !self.first_is_bottom_pt(&p, &dups) {
+                    pp = dups.clone();
+                }
+                dups = dups.borrow().next.clone().unwrap();
+                while dups.borrow().pt != pp.borrow().pt {
+                    dups = dups.borrow().next.clone().unwrap();
+                }
+            }
+        }
+        pp
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -891,6 +891,109 @@ impl Clipper {
             }
         }
     }
+
+    /// Sets the winding count for the edge.
+    fn set_winding_count(&mut self, edge: &Rc<RefCell<TEdge>>) {
+        let mut e = edge.borrow().prev_in_ael.clone();
+        // Find the edge of the same polytype that immediately precedes 'edge' in AEL
+        while let Some(ref e_ref) = e {
+            if e_ref.borrow().poly_typ == edge.borrow().poly_typ && e_ref.borrow().wind_delta != 0 {
+                break;
+            }
+            e = e_ref.borrow().prev_in_ael.clone();
+        }
+
+        if e.is_none() {
+            let pft = if edge.borrow().poly_typ == PolyType::Subject {
+                self.subj_fill_type
+            } else {
+                self.clip_fill_type
+            };
+            if edge.borrow().wind_delta == 0 {
+                edge.borrow_mut().wind_cnt = if pft == PolyFillType::Negative { -1 } else { 1 };
+            } else {
+                edge.borrow_mut().wind_cnt = edge.borrow().wind_delta;
+            }
+            edge.borrow_mut().wind_cnt2 = 0;
+            e = self.base.active_edges.clone(); // Get ready to calculate WindCnt2
+        } else if edge.borrow().wind_delta == 0 && self.clip_type != ClipType::Union {
+            edge.borrow_mut().wind_cnt = 1;
+            edge.borrow_mut().wind_cnt2 = e.as_ref().unwrap().borrow().wind_cnt2;
+            e = e.unwrap().borrow().next_in_ael.clone(); // Get ready to calculate WindCnt2
+        } else if self.is_even_odd_fill_type(&edge.borrow()) {
+            // EvenOdd filling
+            if edge.borrow().wind_delta == 0 {
+                // Are we inside a subj polygon?
+                let mut inside = true;
+                let mut e2 = e.as_ref().unwrap().borrow().prev_in_ael.clone();
+                while let Some(ref e2_ref) = e2 {
+                    if e2_ref.borrow().poly_typ == e.as_ref().unwrap().borrow().poly_typ && e2_ref.borrow().wind_delta != 0 {
+                        inside = !inside;
+                    }
+                    e2 = e2_ref.borrow().prev_in_ael.clone();
+                }
+                edge.borrow_mut().wind_cnt = if inside { 0 } else { 1 };
+            } else {
+                edge.borrow_mut().wind_cnt = edge.borrow().wind_delta;
+            }
+            edge.borrow_mut().wind_cnt2 = e.as_ref().unwrap().borrow().wind_cnt2;
+            e = e.unwrap().borrow().next_in_ael.clone(); // Get ready to calculate WindCnt2
+        } else {
+            // NonZero, Positive, or Negative filling
+            if e.as_ref().unwrap().borrow().wind_cnt * e.as_ref().unwrap().borrow().wind_delta < 0 {
+                // Previous edge is 'decreasing' WindCount (WC) toward zero
+                // so we're outside the previous polygon
+                if e.as_ref().unwrap().borrow().wind_cnt.abs() > 1 {
+                    // Outside previous poly but still inside another
+                    // When reversing direction of previous poly use the same WC
+                    if e.as_ref().unwrap().borrow().wind_delta * edge.borrow().wind_delta < 0 {
+                        edge.borrow_mut().wind_cnt = e.as_ref().unwrap().borrow().wind_cnt;
+                    } else {
+                        // Otherwise continue to 'decrease' WC
+                        edge.borrow_mut().wind_cnt = e.as_ref().unwrap().borrow().wind_cnt + edge.borrow().wind_delta;
+                    }
+                } else {
+                    // Now outside all polys of same polytype so set own WC
+                    edge.borrow_mut().wind_cnt = if edge.borrow().wind_delta == 0 { 1 } else { edge.borrow().wind_delta };
+                }
+            } else {
+                // Previous edge is 'increasing' WindCount (WC) away from zero
+                // so we're inside the previous polygon
+                if edge.borrow().wind_delta == 0 {
+                    edge.borrow_mut().wind_cnt = if e.as_ref().unwrap().borrow().wind_cnt < 0 {
+                        e.as_ref().unwrap().borrow().wind_cnt - 1
+                    } else {
+                        e.as_ref().unwrap().borrow().wind_cnt + 1
+                    };
+                } else if e.as_ref().unwrap().borrow().wind_delta * edge.borrow().wind_delta < 0 {
+                    // If wind direction is reversing previous then use same WC
+                    edge.borrow_mut().wind_cnt = e.as_ref().unwrap().borrow().wind_cnt;
+                } else {
+                    // Otherwise add to WC
+                    edge.borrow_mut().wind_cnt = e.as_ref().unwrap().borrow().wind_cnt + edge.borrow().wind_delta;
+                }
+            }
+            edge.borrow_mut().wind_cnt2 = e.as_ref().unwrap().borrow().wind_cnt2;
+            e = e.unwrap().borrow().next_in_ael.clone(); // Get ready to calculate WindCnt2
+        }
+
+        // Calculate WindCnt2
+        if self.is_even_odd_alt_fill_type(&edge.borrow()) {
+            while let Some(ref e_ref) = e {
+                if e_ref.borrow().poly_typ != edge.borrow().poly_typ && e_ref.borrow().wind_delta != 0 {
+                    edge.borrow_mut().wind_cnt2 = if edge.borrow_mut().wind_cnt2 == 0 { 1 } else { 0 };
+                }
+                e = e_ref.borrow().next_in_ael.clone();
+            }
+        } else {
+            while let Some(ref e_ref) = e {
+                if e_ref.borrow().poly_typ != edge.borrow().poly_typ && e_ref.borrow().wind_delta != 0 {
+                    edge.borrow_mut().wind_cnt2 += e_ref.borrow().wind_delta;
+                }
+                e = e_ref.borrow().next_in_ael.clone();
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////

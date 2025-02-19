@@ -511,7 +511,8 @@ impl Clipper {
         while self.base.pop_scanbeam().map_or(false, |y| {
             top_y = y;
             true
-        }) || self.base.local_minima_pending() {
+        }) || self.base.local_minima_pending()
+        {
             self.process_horizontals();
             self.ghost_joins.clear();
             if !self.process_intersections(top_y) {
@@ -559,7 +560,8 @@ impl Clipper {
 
             if is_maxima_edge {
                 let e_max_pair = self.get_maxima_pair_ex(edge);
-                let is_maxima_edge = e_max_pair.is_none() || !ClipperBase::is_horizontal(&e_max_pair.unwrap().borrow());
+                let is_maxima_edge = e_max_pair.is_none()
+                    || !ClipperBase::is_horizontal(&e_max_pair.unwrap().borrow());
 
                 if is_maxima_edge {
                     if self.strictly_simple {
@@ -576,7 +578,9 @@ impl Clipper {
                 }
             }
 
-            if self.is_intermediate(edge, top_y) && ClipperBase::is_horizontal(&edge.borrow().next_in_lml.as_ref().unwrap().borrow()) {
+            if self.is_intermediate(edge, top_y)
+                && ClipperBase::is_horizontal(&edge.borrow().next_in_lml.as_ref().unwrap().borrow())
+            {
                 self.base.update_edge_into_ael(edge);
                 if edge.borrow().out_idx >= 0 {
                     self.add_out_pt(edge, edge.borrow().bot);
@@ -589,7 +593,13 @@ impl Clipper {
 
             if self.strictly_simple {
                 let e_prev = edge.borrow().prev_in_ael.clone();
-                if edge.borrow().out_idx >= 0 && edge.borrow().wind_delta != 0 && e_prev.is_some() && e_prev.as_ref().unwrap().borrow().out_idx >= 0 && e_prev.as_ref().unwrap().borrow().curr.x == edge.borrow().curr.x && e_prev.as_ref().unwrap().borrow().wind_delta != 0 {
+                if edge.borrow().out_idx >= 0
+                    && edge.borrow().wind_delta != 0
+                    && e_prev.is_some()
+                    && e_prev.as_ref().unwrap().borrow().out_idx >= 0
+                    && e_prev.as_ref().unwrap().borrow().curr.x == edge.borrow().curr.x
+                    && e_prev.as_ref().unwrap().borrow().wind_delta != 0
+                {
                     let ip = IntPoint::new(edge.borrow().curr.x, edge.borrow().curr.y);
                     let op = self.add_out_pt(e_prev.as_ref().unwrap(), ip);
                     let op2 = self.add_out_pt(edge, ip);
@@ -615,12 +625,36 @@ impl Clipper {
                 let e_prev = edge.borrow().prev_in_ael.clone();
                 let e_next = edge.borrow().next_in_ael.clone();
                 if let Some(ref e_prev) = e_prev {
-                    if e_prev.borrow().curr.x == edge.borrow().bot.x && e_prev.borrow().curr.y == edge.borrow().bot.y && op.is_some() && e_prev.borrow().out_idx >= 0 && e_prev.borrow().curr.y > e_prev.borrow().top.y && ClipperBase::slopes_equal(&edge.borrow(), &e_prev.borrow(), self.base.use_full_range) && edge.borrow().wind_delta != 0 && e_prev.borrow().wind_delta != 0 {
+                    if e_prev.borrow().curr.x == edge.borrow().bot.x
+                        && e_prev.borrow().curr.y == edge.borrow().bot.y
+                        && op.is_some()
+                        && e_prev.borrow().out_idx >= 0
+                        && e_prev.borrow().curr.y > e_prev.borrow().top.y
+                        && ClipperBase::slopes_equal(
+                            &edge.borrow(),
+                            &e_prev.borrow(),
+                            self.base.use_full_range,
+                        )
+                        && edge.borrow().wind_delta != 0
+                        && e_prev.borrow().wind_delta != 0
+                    {
                         let op2 = self.add_out_pt(e_prev, edge.borrow().bot);
                         self.add_join(op.unwrap(), op2, edge.borrow().top);
                     }
                 } else if let Some(ref e_next) = e_next {
-                    if e_next.borrow().curr.x == edge.borrow().bot.x && e_next.borrow().curr.y == edge.borrow().bot.y && op.is_some() && e_next.borrow().out_idx >= 0 && e_next.borrow().curr.y > e_next.borrow().top.y && ClipperBase::slopes_equal(&edge.borrow(), &e_next.borrow(), self.base.use_full_range) && edge.borrow().wind_delta != 0 && e_next.borrow().wind_delta != 0 {
+                    if e_next.borrow().curr.x == edge.borrow().bot.x
+                        && e_next.borrow().curr.y == edge.borrow().bot.y
+                        && op.is_some()
+                        && e_next.borrow().out_idx >= 0
+                        && e_next.borrow().curr.y > e_next.borrow().top.y
+                        && ClipperBase::slopes_equal(
+                            &edge.borrow(),
+                            &e_next.borrow(),
+                            self.base.use_full_range,
+                        )
+                        && edge.borrow().wind_delta != 0
+                        && e_next.borrow().wind_delta != 0
+                    {
                         let op2 = self.add_out_pt(e_next, edge.borrow().bot);
                         self.add_join(op.unwrap(), op2, edge.borrow().top);
                     }
@@ -663,7 +697,15 @@ impl Clipper {
             polytree.all_polys.push(pn.clone());
             out_rec.poly_node = Some(pn.clone());
             pn.polygon.reserve(cnt);
-            let mut op = out_rec.pts.as_ref().unwrap().borrow().prev.as_ref().unwrap().clone();
+            let mut op = out_rec
+                .pts
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .prev
+                .as_ref()
+                .unwrap()
+                .clone();
             for _ in 0..cnt {
                 pn.polygon.push(op.borrow().pt);
                 op = op.borrow().prev.as_ref().unwrap().clone();
@@ -757,9 +799,10 @@ impl Clipper {
     /// Fixes the hole linkage for an OutRec.
     fn fix_hole_linkage(&mut self, out_rec: &mut OutRec) {
         // Skip if an outermost polygon or already points to the correct FirstLeft.
-        if out_rec.first_left.is_none() || 
-           (out_rec.is_hole != out_rec.first_left.as_ref().unwrap().borrow().is_hole &&
-            out_rec.first_left.as_ref().unwrap().borrow().pts.is_some()) {
+        if out_rec.first_left.is_none()
+            || (out_rec.is_hole != out_rec.first_left.as_ref().unwrap().borrow().is_hole
+                && out_rec.first_left.as_ref().unwrap().borrow().pts.is_some())
+        {
             return;
         }
 
@@ -812,7 +855,9 @@ impl Clipper {
             if let Some(rb) = rb {
                 if self.base.is_horizontal(&rb.borrow()) {
                     if rb.borrow().next_in_lml.is_some() {
-                        self.base.insert_scanbeam(rb.borrow().next_in_lml.as_ref().unwrap().borrow().top.y);
+                        self.base.insert_scanbeam(
+                            rb.borrow().next_in_lml.as_ref().unwrap().borrow().top.y,
+                        );
                     }
                     self.add_edge_to_sel(&rb);
                 } else {
@@ -828,22 +873,72 @@ impl Clipper {
             let rb = rb.unwrap();
 
             if let Some(op1) = op1 {
-                if self.base.is_horizontal(&rb.borrow()) && !self.ghost_joins.is_empty() && rb.borrow().wind_delta != 0 {
+                if self.base.is_horizontal(&rb.borrow())
+                    && !self.ghost_joins.is_empty()
+                    && rb.borrow().wind_delta != 0
+                {
                     for j in &self.ghost_joins {
-                        if self.horz_segments_overlap(j.out_pt1.as_ref().unwrap().borrow().pt.x, j.off_pt.x, rb.borrow().bot.x, rb.borrow().top.x) {
+                        if self.horz_segments_overlap(
+                            j.out_pt1.as_ref().unwrap().borrow().pt.x,
+                            j.off_pt.x,
+                            rb.borrow().bot.x,
+                            rb.borrow().top.x,
+                        ) {
                             self.add_join(j.out_pt1.as_ref().unwrap(), &op1, j.off_pt);
                         }
                     }
                 }
 
-                if lb.borrow().out_idx >= 0 && lb.borrow().prev_in_ael.is_some() && lb.borrow().prev_in_ael.as_ref().unwrap().borrow().curr.x == lb.borrow().bot.x && lb.borrow().prev_in_ael.as_ref().unwrap().borrow().out_idx >= 0 && self.base.slopes_equal(&lb.borrow().prev_in_ael.as_ref().unwrap().borrow(), &lb.borrow(), self.base.use_full_range) && lb.borrow().wind_delta != 0 && lb.borrow().prev_in_ael.as_ref().unwrap().borrow().wind_delta != 0 {
-                    let op2 = self.add_out_pt(&lb.borrow().prev_in_ael.as_ref().unwrap(), lb.borrow().bot);
+                if lb.borrow().out_idx >= 0
+                    && lb.borrow().prev_in_ael.is_some()
+                    && lb.borrow().prev_in_ael.as_ref().unwrap().borrow().curr.x
+                        == lb.borrow().bot.x
+                    && lb.borrow().prev_in_ael.as_ref().unwrap().borrow().out_idx >= 0
+                    && self.base.slopes_equal(
+                        &lb.borrow().prev_in_ael.as_ref().unwrap().borrow(),
+                        &lb.borrow(),
+                        self.base.use_full_range,
+                    )
+                    && lb.borrow().wind_delta != 0
+                    && lb
+                        .borrow()
+                        .prev_in_ael
+                        .as_ref()
+                        .unwrap()
+                        .borrow()
+                        .wind_delta
+                        != 0
+                {
+                    let op2 = self
+                        .add_out_pt(&lb.borrow().prev_in_ael.as_ref().unwrap(), lb.borrow().bot);
                     self.add_join(&op1, &op2, lb.borrow().top);
                 }
 
-                if !Rc::ptr_eq(&lb.borrow().next_in_ael, &Some(Rc::new(RefCell::new(rb.borrow().clone())))) {
-                    if rb.borrow().out_idx >= 0 && rb.borrow().prev_in_ael.as_ref().unwrap().borrow().out_idx >= 0 && self.base.slopes_equal(&rb.borrow().prev_in_ael.as_ref().unwrap().borrow(), &rb.borrow(), self.base.use_full_range) && rb.borrow().wind_delta != 0 && rb.borrow().prev_in_ael.as_ref().unwrap().borrow().wind_delta != 0 {
-                        let op2 = self.add_out_pt(&rb.borrow().prev_in_ael.as_ref().unwrap(), rb.borrow().bot);
+                if !Rc::ptr_eq(
+                    &lb.borrow().next_in_ael,
+                    &Some(Rc::new(RefCell::new(rb.borrow().clone()))),
+                ) {
+                    if rb.borrow().out_idx >= 0
+                        && rb.borrow().prev_in_ael.as_ref().unwrap().borrow().out_idx >= 0
+                        && self.base.slopes_equal(
+                            &rb.borrow().prev_in_ael.as_ref().unwrap().borrow(),
+                            &rb.borrow(),
+                            self.base.use_full_range,
+                        )
+                        && rb.borrow().wind_delta != 0
+                        && rb
+                            .borrow()
+                            .prev_in_ael
+                            .as_ref()
+                            .unwrap()
+                            .borrow()
+                            .wind_delta
+                            != 0
+                    {
+                        let op2 = self.add_out_pt(
+                            &rb.borrow().prev_in_ael.as_ref().unwrap(),
+                            rb.borrow().bot,
+                        );
                         self.add_join(&op1, &op2, rb.borrow().top);
                     }
 
@@ -861,24 +956,46 @@ impl Clipper {
     }
 
     /// Inserts an edge into the active edge list.
-    fn insert_edge_into_ael(&mut self, edge: &Rc<RefCell<TEdge>>, start_edge: Option<&Rc<RefCell<TEdge>>>) {
+    fn insert_edge_into_ael(
+        &mut self,
+        edge: &Rc<RefCell<TEdge>>,
+        start_edge: Option<&Rc<RefCell<TEdge>>>,
+    ) {
         if self.base.active_edges.is_none() {
             edge.borrow_mut().prev_in_ael = None;
             edge.borrow_mut().next_in_ael = None;
             self.base.active_edges = Some(edge.clone());
-        } else if start_edge.is_none() && self.e2_inserts_before_e1(self.base.active_edges.as_ref().unwrap(), edge) {
+        } else if start_edge.is_none()
+            && self.e2_inserts_before_e1(self.base.active_edges.as_ref().unwrap(), edge)
+        {
             edge.borrow_mut().prev_in_ael = None;
             edge.borrow_mut().next_in_ael = self.base.active_edges.clone();
-            self.base.active_edges.as_ref().unwrap().borrow_mut().prev_in_ael = Some(edge.clone());
+            self.base
+                .active_edges
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .prev_in_ael = Some(edge.clone());
             self.base.active_edges = Some(edge.clone());
         } else {
-            let mut start_edge = start_edge.unwrap_or(self.base.active_edges.as_ref().unwrap()).clone();
-            while start_edge.borrow().next_in_ael.is_some() && !self.e2_inserts_before_e1(start_edge.borrow().next_in_ael.as_ref().unwrap(), edge) {
+            let mut start_edge = start_edge
+                .unwrap_or(self.base.active_edges.as_ref().unwrap())
+                .clone();
+            while start_edge.borrow().next_in_ael.is_some()
+                && !self
+                    .e2_inserts_before_e1(start_edge.borrow().next_in_ael.as_ref().unwrap(), edge)
+            {
                 start_edge = start_edge.borrow().next_in_ael.as_ref().unwrap().clone();
             }
             edge.borrow_mut().next_in_ael = start_edge.borrow().next_in_ael.clone();
             if start_edge.borrow().next_in_ael.is_some() {
-                start_edge.borrow().next_in_ael.as_ref().unwrap().borrow_mut().prev_in_ael = Some(edge.clone());
+                start_edge
+                    .borrow()
+                    .next_in_ael
+                    .as_ref()
+                    .unwrap()
+                    .borrow_mut()
+                    .prev_in_ael = Some(edge.clone());
             }
             edge.borrow_mut().prev_in_ael = Some(start_edge.clone());
             start_edge.borrow_mut().next_in_ael = Some(edge.clone());
@@ -1031,7 +1148,9 @@ impl Clipper {
                 let mut inside = true;
                 let mut e2 = e.as_ref().unwrap().borrow().prev_in_ael.clone();
                 while let Some(ref e2_ref) = e2 {
-                    if e2_ref.borrow().poly_typ == e.as_ref().unwrap().borrow().poly_typ && e2_ref.borrow().wind_delta != 0 {
+                    if e2_ref.borrow().poly_typ == e.as_ref().unwrap().borrow().poly_typ
+                        && e2_ref.borrow().wind_delta != 0
+                    {
                         inside = !inside;
                     }
                     e2 = e2_ref.borrow().prev_in_ael.clone();
@@ -1054,11 +1173,16 @@ impl Clipper {
                         edge.borrow_mut().wind_cnt = e.as_ref().unwrap().borrow().wind_cnt;
                     } else {
                         // Otherwise continue to 'decrease' WC
-                        edge.borrow_mut().wind_cnt = e.as_ref().unwrap().borrow().wind_cnt + edge.borrow().wind_delta;
+                        edge.borrow_mut().wind_cnt =
+                            e.as_ref().unwrap().borrow().wind_cnt + edge.borrow().wind_delta;
                     }
                 } else {
                     // Now outside all polys of same polytype so set own WC
-                    edge.borrow_mut().wind_cnt = if edge.borrow().wind_delta == 0 { 1 } else { edge.borrow().wind_delta };
+                    edge.borrow_mut().wind_cnt = if edge.borrow().wind_delta == 0 {
+                        1
+                    } else {
+                        edge.borrow().wind_delta
+                    };
                 }
             } else {
                 // Previous edge is 'increasing' WindCount (WC) away from zero
@@ -1074,7 +1198,8 @@ impl Clipper {
                     edge.borrow_mut().wind_cnt = e.as_ref().unwrap().borrow().wind_cnt;
                 } else {
                     // Otherwise add to WC
-                    edge.borrow_mut().wind_cnt = e.as_ref().unwrap().borrow().wind_cnt + edge.borrow().wind_delta;
+                    edge.borrow_mut().wind_cnt =
+                        e.as_ref().unwrap().borrow().wind_cnt + edge.borrow().wind_delta;
                 }
             }
             edge.borrow_mut().wind_cnt2 = e.as_ref().unwrap().borrow().wind_cnt2;
@@ -1084,14 +1209,22 @@ impl Clipper {
         // Calculate WindCnt2
         if self.is_even_odd_alt_fill_type(&edge.borrow()) {
             while let Some(ref e_ref) = e {
-                if e_ref.borrow().poly_typ != edge.borrow().poly_typ && e_ref.borrow().wind_delta != 0 {
-                    edge.borrow_mut().wind_cnt2 = if edge.borrow_mut().wind_cnt2 == 0 { 1 } else { 0 };
+                if e_ref.borrow().poly_typ != edge.borrow().poly_typ
+                    && e_ref.borrow().wind_delta != 0
+                {
+                    edge.borrow_mut().wind_cnt2 = if edge.borrow_mut().wind_cnt2 == 0 {
+                        1
+                    } else {
+                        0
+                    };
                 }
                 e = e_ref.borrow().next_in_ael.clone();
             }
         } else {
             while let Some(ref e_ref) = e {
-                if e_ref.borrow().poly_typ != edge.borrow().poly_typ && e_ref.borrow().wind_delta != 0 {
+                if e_ref.borrow().poly_typ != edge.borrow().poly_typ
+                    && e_ref.borrow().wind_delta != 0
+                {
                     edge.borrow_mut().wind_cnt2 += e_ref.borrow().wind_delta;
                 }
                 e = e_ref.borrow().next_in_ael.clone();
@@ -1208,7 +1341,12 @@ impl Clipper {
     }
 
     /// Adds a local maximum polygon.
-    fn add_local_max_poly(&mut self, e1: &Rc<RefCell<TEdge>>, e2: &Rc<RefCell<TEdge>>, pt: IntPoint) {
+    fn add_local_max_poly(
+        &mut self,
+        e1: &Rc<RefCell<TEdge>>,
+        e2: &Rc<RefCell<TEdge>>,
+        pt: IntPoint,
+    ) {
         self.add_out_pt(e1, pt);
         if e2.borrow().wind_delta == 0 {
             self.add_out_pt(e2, pt);
@@ -1224,7 +1362,12 @@ impl Clipper {
     }
 
     /// Adds a local minimum polygon.
-    fn add_local_min_poly(&mut self, e1: &Rc<RefCell<TEdge>>, e2: &Rc<RefCell<TEdge>>, pt: IntPoint) -> Rc<RefCell<OutPt>> {
+    fn add_local_min_poly(
+        &mut self,
+        e1: &Rc<RefCell<TEdge>>,
+        e2: &Rc<RefCell<TEdge>>,
+        pt: IntPoint,
+    ) -> Rc<RefCell<OutPt>> {
         let result;
         let e;
         let prev_e;
@@ -1253,10 +1396,23 @@ impl Clipper {
         }
 
         if let Some(ref prev_e) = prev_e {
-            if prev_e.borrow().out_idx >= 0 && prev_e.borrow().top.y < pt.y && e.borrow().top.y < pt.y {
+            if prev_e.borrow().out_idx >= 0
+                && prev_e.borrow().top.y < pt.y
+                && e.borrow().top.y < pt.y
+            {
                 let x_prev = self.top_x(prev_e, pt.y);
                 let x_e = self.top_x(&e, pt.y);
-                if x_prev == x_e && e.borrow().wind_delta != 0 && prev_e.borrow().wind_delta != 0 && self.base.slopes_equal_points(IntPoint::new(x_prev, pt.y), prev_e.borrow().top, IntPoint::new(x_e, pt.y), e.borrow().top, self.base.use_full_range) {
+                if x_prev == x_e
+                    && e.borrow().wind_delta != 0
+                    && prev_e.borrow().wind_delta != 0
+                    && self.base.slopes_equal_points(
+                        IntPoint::new(x_prev, pt.y),
+                        prev_e.borrow().top,
+                        IntPoint::new(x_e, pt.y),
+                        e.borrow().top,
+                        self.base.use_full_range,
+                    )
+                {
                     let out_pt = self.add_out_pt(prev_e, pt);
                     self.add_join(&result, &out_pt, e.borrow().top);
                 }
@@ -1315,7 +1471,15 @@ impl Clipper {
         if e.borrow().side == EdgeSide::Left {
             out_rec.pts.as_ref().unwrap().clone()
         } else {
-            out_rec.pts.as_ref().unwrap().borrow().prev.as_ref().unwrap().clone()
+            out_rec
+                .pts
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .prev
+                .as_ref()
+                .unwrap()
+                .clone()
         }
     }
 
@@ -1371,7 +1535,11 @@ impl Clipper {
     }
 
     /// Determines if the first bottom point is the bottom-most point.
-    fn first_is_bottom_pt(&self, btm_pt1: &Rc<RefCell<OutPt>>, btm_pt2: &Rc<RefCell<OutPt>>) -> bool {
+    fn first_is_bottom_pt(
+        &self,
+        btm_pt1: &Rc<RefCell<OutPt>>,
+        btm_pt2: &Rc<RefCell<OutPt>>,
+    ) -> bool {
         let mut p = btm_pt1.borrow().prev.clone().unwrap();
         while p.borrow().pt == btm_pt1.borrow().pt && !Rc::ptr_eq(&p, btm_pt1) {
             p = p.borrow().prev.clone().unwrap();
@@ -1415,7 +1583,9 @@ impl Clipper {
                     dups = None;
                     pp = p.clone();
                 } else {
-                    if !Rc::ptr_eq(&p.borrow().next.clone().unwrap(), &pp) && !Rc::ptr_eq(&p.borrow().prev.clone().unwrap(), &pp) {
+                    if !Rc::ptr_eq(&p.borrow().next.clone().unwrap(), &pp)
+                        && !Rc::ptr_eq(&p.borrow().prev.clone().unwrap(), &pp)
+                    {
                         dups = Some(p.clone());
                     }
                 }
@@ -1438,12 +1608,18 @@ impl Clipper {
     }
 
     /// Determines which OutRec has the lower bottom point.
-    fn get_lowermost_rec(&mut self, out_rec1: &Rc<RefCell<OutRec>>, out_rec2: &Rc<RefCell<OutRec>>) -> Rc<RefCell<OutRec>> {
+    fn get_lowermost_rec(
+        &mut self,
+        out_rec1: &Rc<RefCell<OutRec>>,
+        out_rec2: &Rc<RefCell<OutRec>>,
+    ) -> Rc<RefCell<OutRec>> {
         if out_rec1.borrow().bottom_pt.is_none() {
-            out_rec1.borrow_mut().bottom_pt = Some(self.get_bottom_pt(out_rec1.borrow().pts.as_ref().unwrap()));
+            out_rec1.borrow_mut().bottom_pt =
+                Some(self.get_bottom_pt(out_rec1.borrow().pts.as_ref().unwrap()));
         }
         if out_rec2.borrow().bottom_pt.is_none() {
-            out_rec2.borrow_mut().bottom_pt = Some(self.get_bottom_pt(out_rec2.borrow().pts.as_ref().unwrap()));
+            out_rec2.borrow_mut().bottom_pt =
+                Some(self.get_bottom_pt(out_rec2.borrow().pts.as_ref().unwrap()));
         }
         let b_pt1 = out_rec1.borrow().bottom_pt.as_ref().unwrap();
         let b_pt2 = out_rec2.borrow().bottom_pt.as_ref().unwrap();
@@ -1467,7 +1643,11 @@ impl Clipper {
     }
 
     /// Determines if OutRec1 is to the right of OutRec2.
-    fn out_rec1_right_of_out_rec2(&self, mut out_rec1: &Rc<RefCell<OutRec>>, out_rec2: &Rc<RefCell<OutRec>>) -> bool {
+    fn out_rec1_right_of_out_rec2(
+        &self,
+        mut out_rec1: &Rc<RefCell<OutRec>>,
+        out_rec2: &Rc<RefCell<OutRec>>,
+    ) -> bool {
         while let Some(ref first_left) = out_rec1.borrow().first_left {
             out_rec1 = first_left;
             if Rc::ptr_eq(out_rec1, out_rec2) {
@@ -1480,7 +1660,10 @@ impl Clipper {
     /// Gets the OutRec for the given index.
     fn get_out_rec(&self, idx: i32) -> Rc<RefCell<OutRec>> {
         let mut out_rec = self.base.poly_outs[idx as usize].clone();
-        while !Rc::ptr_eq(&out_rec, &self.base.poly_outs[out_rec.borrow().idx as usize]) {
+        while !Rc::ptr_eq(
+            &out_rec,
+            &self.base.poly_outs[out_rec.borrow().idx as usize],
+        ) {
             out_rec = self.base.poly_outs[out_rec.borrow().idx as usize].clone();
         }
         out_rec
@@ -1603,7 +1786,10 @@ impl Clipper {
         if e1.borrow().wind_delta == 0 || e2.borrow().wind_delta == 0 {
             if e1.borrow().wind_delta == 0 && e2.borrow().wind_delta == 0 {
                 return;
-            } else if e1.borrow().poly_typ == e2.borrow().poly_typ && e1.borrow().wind_delta != e2.borrow().wind_delta && self.clip_type == ClipType::Union {
+            } else if e1.borrow().poly_typ == e2.borrow().poly_typ
+                && e1.borrow().wind_delta != e2.borrow().wind_delta
+                && self.clip_type == ClipType::Union
+            {
                 if e1.borrow().wind_delta == 0 {
                     if e2_contributing {
                         self.add_out_pt(e1, pt);
@@ -1620,12 +1806,18 @@ impl Clipper {
                     }
                 }
             } else if e1.borrow().poly_typ != e2.borrow().poly_typ {
-                if e1.borrow().wind_delta == 0 && e2.borrow().wind_cnt.abs() == 1 && (self.clip_type != ClipType::Union || e2.borrow().wind_cnt2 == 0) {
+                if e1.borrow().wind_delta == 0
+                    && e2.borrow().wind_cnt.abs() == 1
+                    && (self.clip_type != ClipType::Union || e2.borrow().wind_cnt2 == 0)
+                {
                     self.add_out_pt(e1, pt);
                     if e1_contributing {
                         e1.borrow_mut().out_idx = UNASSIGNED;
                     }
-                } else if e2.borrow().wind_delta == 0 && e1.borrow().wind_cnt.abs() == 1 && (self.clip_type != ClipType::Union || e1.borrow().wind_cnt2 == 0) {
+                } else if e2.borrow().wind_delta == 0
+                    && e1.borrow().wind_cnt.abs() == 1
+                    && (self.clip_type != ClipType::Union || e1.borrow().wind_cnt2 == 0)
+                {
                     self.add_out_pt(e2, pt);
                     if e2_contributing {
                         e2.borrow_mut().out_idx = UNASSIGNED;
@@ -1666,11 +1858,22 @@ impl Clipper {
             }
         }
 
-        let (e1_fill_type, e2_fill_type, e1_fill_type2, e2_fill_type2) = if e1.borrow().poly_typ == PolyType::Subject {
-            (self.subj_fill_type, self.clip_fill_type, self.clip_fill_type, self.subj_fill_type)
-        } else {
-            (self.clip_fill_type, self.subj_fill_type, self.subj_fill_type, self.clip_fill_type)
-        };
+        let (e1_fill_type, e2_fill_type, e1_fill_type2, e2_fill_type2) =
+            if e1.borrow().poly_typ == PolyType::Subject {
+                (
+                    self.subj_fill_type,
+                    self.clip_fill_type,
+                    self.clip_fill_type,
+                    self.subj_fill_type,
+                )
+            } else {
+                (
+                    self.clip_fill_type,
+                    self.subj_fill_type,
+                    self.subj_fill_type,
+                    self.clip_fill_type,
+                )
+            };
 
         let e1_wc = match e1_fill_type {
             PolyFillType::Positive => e1.borrow().wind_cnt,
@@ -1685,7 +1888,10 @@ impl Clipper {
         };
 
         if e1_contributing && e2_contributing {
-            if (e1_wc != 0 && e1_wc != 1) || (e2_wc != 0 && e2_wc != 1) || (e1.borrow().poly_typ != e2.borrow().poly_typ && self.clip_type != ClipType::Xor) {
+            if (e1_wc != 0 && e1_wc != 1)
+                || (e2_wc != 0 && e2_wc != 1)
+                || (e1.borrow().poly_typ != e2.borrow().poly_typ && self.clip_type != ClipType::Xor)
+            {
                 self.add_local_max_poly(e1, e2, pt);
             } else {
                 self.add_out_pt(e1, pt);
@@ -1733,7 +1939,11 @@ impl Clipper {
                         }
                     }
                     ClipType::Difference => {
-                        if (e1.borrow().poly_typ == PolyType::Clip && e1_wc2 > 0 && e2_wc2 > 0) || (e1.borrow().poly_typ == PolyType::Subject && e1_wc2 <= 0 && e2_wc2 <= 0) {
+                        if (e1.borrow().poly_typ == PolyType::Clip && e1_wc2 > 0 && e2_wc2 > 0)
+                            || (e1.borrow().poly_typ == PolyType::Subject
+                                && e1_wc2 <= 0
+                                && e2_wc2 <= 0)
+                        {
                             self.add_local_min_poly(e1, e2, pt);
                         }
                     }
@@ -1751,7 +1961,10 @@ impl Clipper {
     fn delete_from_sel(&mut self, e: &Rc<RefCell<TEdge>>) {
         let sel_prev = e.borrow().prev_in_sel.clone();
         let sel_next = e.borrow().next_in_sel.clone();
-        if sel_prev.is_none() && sel_next.is_none() && !Rc::ptr_eq(&Some(e.clone()), &self.sorted_edges) {
+        if sel_prev.is_none()
+            && sel_next.is_none()
+            && !Rc::ptr_eq(&Some(e.clone()), &self.sorted_edges)
+        {
             return; // already deleted
         }
         if let Some(ref sel_prev) = sel_prev {
@@ -1774,7 +1987,13 @@ impl Clipper {
     }
 
     /// Determines the direction and left/right bounds of a horizontal edge.
-    fn get_horz_direction(&self, horz_edge: &Rc<RefCell<TEdge>>, dir: &mut Direction, left: &mut CInt, right: &mut CInt) {
+    fn get_horz_direction(
+        &self,
+        horz_edge: &Rc<RefCell<TEdge>>,
+        dir: &mut Direction,
+        left: &mut CInt,
+        right: &mut CInt,
+    ) {
         if horz_edge.borrow().bot.x < horz_edge.borrow().top.x {
             *left = horz_edge.borrow().bot.x;
             *right = horz_edge.borrow().top.x;
@@ -1797,7 +2016,11 @@ impl Clipper {
 
         let mut e_last_horz = horz_edge.clone();
         let mut e_max_pair = None;
-        while e_last_horz.borrow().next_in_lml.is_some() && self.base.is_horizontal(&e_last_horz.borrow().next_in_lml.as_ref().unwrap().borrow()) {
+        while e_last_horz.borrow().next_in_lml.is_some()
+            && self
+                .base
+                .is_horizontal(&e_last_horz.borrow().next_in_lml.as_ref().unwrap().borrow())
+        {
             e_last_horz = e_last_horz.borrow().next_in_lml.as_ref().unwrap().clone();
         }
         if e_last_horz.borrow().next_in_lml.is_none() {
@@ -1845,7 +2068,10 @@ impl Clipper {
                                 break;
                             }
                             if horz_edge.borrow().out_idx >= 0 && !is_open {
-                                self.add_out_pt(horz_edge, IntPoint::new(curr_max.x, horz_edge.borrow().bot.y));
+                                self.add_out_pt(
+                                    horz_edge,
+                                    IntPoint::new(curr_max.x, horz_edge.borrow().bot.y),
+                                );
                             }
                             curr_max = curr_max.next.clone();
                         }
@@ -1855,18 +2081,27 @@ impl Clipper {
                                 break;
                             }
                             if horz_edge.borrow().out_idx >= 0 && !is_open {
-                                self.add_out_pt(horz_edge, IntPoint::new(curr_max.x, horz_edge.borrow().bot.y));
+                                self.add_out_pt(
+                                    horz_edge,
+                                    IntPoint::new(curr_max.x, horz_edge.borrow().bot.y),
+                                );
                             }
                             curr_max = curr_max.prev.clone();
                         }
                     }
                 }
 
-                if (dir == Direction::LeftToRight && e_ref.borrow().curr.x > horz_right) || (dir == Direction::RightToLeft && e_ref.borrow().curr.x < horz_left) {
+                if (dir == Direction::LeftToRight && e_ref.borrow().curr.x > horz_right)
+                    || (dir == Direction::RightToLeft && e_ref.borrow().curr.x < horz_left)
+                {
                     break;
                 }
 
-                if e_ref.borrow().curr.x == horz_edge.borrow().top.x && horz_edge.borrow().next_in_lml.is_some() && e_ref.borrow().dx < horz_edge.borrow().next_in_lml.as_ref().unwrap().borrow().dx {
+                if e_ref.borrow().curr.x == horz_edge.borrow().top.x
+                    && horz_edge.borrow().next_in_lml.is_some()
+                    && e_ref.borrow().dx
+                        < horz_edge.borrow().next_in_lml.as_ref().unwrap().borrow().dx
+                {
                     break;
                 }
 
@@ -1874,7 +2109,14 @@ impl Clipper {
                     op1 = Some(self.add_out_pt(horz_edge, e_ref.borrow().curr));
                     let mut e_next_horz = self.sorted_edges.clone();
                     while let Some(ref e_next_horz) = e_next_horz {
-                        if e_next_horz.borrow().out_idx >= 0 && self.horz_segments_overlap(horz_edge.borrow().bot.x, horz_edge.borrow().top.x, e_next_horz.borrow().bot.x, e_next_horz.borrow().top.x) {
+                        if e_next_horz.borrow().out_idx >= 0
+                            && self.horz_segments_overlap(
+                                horz_edge.borrow().bot.x,
+                                horz_edge.borrow().top.x,
+                                e_next_horz.borrow().bot.x,
+                                e_next_horz.borrow().top.x,
+                            )
+                        {
                             let op2 = self.get_last_out_pt(e_next_horz);
                             self.add_join(&op2, &op1.as_ref().unwrap(), e_next_horz.borrow().top);
                         }
@@ -1885,7 +2127,11 @@ impl Clipper {
 
                 if Rc::ptr_eq(e_ref, &e_max_pair.as_ref().unwrap()) && is_last_horz {
                     if horz_edge.borrow().out_idx >= 0 {
-                        self.add_local_max_poly(horz_edge, &e_max_pair.as_ref().unwrap(), horz_edge.borrow().top);
+                        self.add_local_max_poly(
+                            horz_edge,
+                            &e_max_pair.as_ref().unwrap(),
+                            horz_edge.borrow().top,
+                        );
                     }
                     self.base.delete_from_ael(horz_edge);
                     self.base.delete_from_ael(&e_max_pair.as_ref().unwrap());
@@ -1903,7 +2149,11 @@ impl Clipper {
                 e = e_next;
             }
 
-            if horz_edge.borrow().next_in_lml.is_none() || !self.base.is_horizontal(&horz_edge.borrow().next_in_lml.as_ref().unwrap().borrow()) {
+            if horz_edge.borrow().next_in_lml.is_none()
+                || !self
+                    .base
+                    .is_horizontal(&horz_edge.borrow().next_in_lml.as_ref().unwrap().borrow())
+            {
                 break;
             }
 
@@ -1918,7 +2168,14 @@ impl Clipper {
             op1 = Some(self.get_last_out_pt(horz_edge));
             let mut e_next_horz = self.sorted_edges.clone();
             while let Some(ref e_next_horz) = e_next_horz {
-                if e_next_horz.borrow().out_idx >= 0 && self.horz_segments_overlap(horz_edge.borrow().bot.x, horz_edge.borrow().top.x, e_next_horz.borrow().bot.x, e_next_horz.borrow().top.x) {
+                if e_next_horz.borrow().out_idx >= 0
+                    && self.horz_segments_overlap(
+                        horz_edge.borrow().bot.x,
+                        horz_edge.borrow().top.x,
+                        e_next_horz.borrow().bot.x,
+                        e_next_horz.borrow().top.x,
+                    )
+                {
                     let op2 = self.get_last_out_pt(e_next_horz);
                     self.add_join(&op2, &op1.as_ref().unwrap(), e_next_horz.borrow().top);
                 }
@@ -1937,12 +2194,32 @@ impl Clipper {
                 let e_prev = horz_edge.borrow().prev_in_ael.clone();
                 let e_next = horz_edge.borrow().next_in_ael.clone();
                 if let Some(ref e_prev) = e_prev {
-                    if e_prev.borrow().curr.x == horz_edge.borrow().bot.x && e_prev.borrow().curr.y == horz_edge.borrow().bot.y && e_prev.borrow().wind_delta != 0 && e_prev.borrow().out_idx >= 0 && e_prev.borrow().curr.y > e_prev.borrow().top.y && self.base.slopes_equal(&horz_edge.borrow(), &e_prev.borrow(), self.base.use_full_range) {
+                    if e_prev.borrow().curr.x == horz_edge.borrow().bot.x
+                        && e_prev.borrow().curr.y == horz_edge.borrow().bot.y
+                        && e_prev.borrow().wind_delta != 0
+                        && e_prev.borrow().out_idx >= 0
+                        && e_prev.borrow().curr.y > e_prev.borrow().top.y
+                        && self.base.slopes_equal(
+                            &horz_edge.borrow(),
+                            &e_prev.borrow(),
+                            self.base.use_full_range,
+                        )
+                    {
                         let op2 = self.add_out_pt(e_prev, horz_edge.borrow().bot);
                         self.add_join(&op1.as_ref().unwrap(), &op2, horz_edge.borrow().top);
                     }
                 } else if let Some(ref e_next) = e_next {
-                    if e_next.borrow().curr.x == horz_edge.borrow().bot.x && e_next.borrow().curr.y == horz_edge.borrow().bot.y && e_next.borrow().wind_delta != 0 && e_next.borrow().out_idx >= 0 && e_next.borrow().curr.y > e_next.borrow().top.y && self.base.slopes_equal(&horz_edge.borrow(), &e_next.borrow(), self.base.use_full_range) {
+                    if e_next.borrow().curr.x == horz_edge.borrow().bot.x
+                        && e_next.borrow().curr.y == horz_edge.borrow().bot.y
+                        && e_next.borrow().wind_delta != 0
+                        && e_next.borrow().out_idx >= 0
+                        && e_next.borrow().curr.y > e_next.borrow().top.y
+                        && self.base.slopes_equal(
+                            &horz_edge.borrow(),
+                            &e_next.borrow(),
+                            self.base.use_full_range,
+                        )
+                    {
                         let op2 = self.add_out_pt(e_next, horz_edge.borrow().bot);
                         self.add_join(&op1.as_ref().unwrap(), &op2, horz_edge.borrow().top);
                     }
@@ -1959,7 +2236,11 @@ impl Clipper {
     }
 
     /// Gets the next edge in the active edge list (AEL) based on the direction.
-    fn get_next_in_ael(&self, e: &Rc<RefCell<TEdge>>, direction: Direction) -> Option<Rc<RefCell<TEdge>>> {
+    fn get_next_in_ael(
+        &self,
+        e: &Rc<RefCell<TEdge>>,
+        direction: Direction,
+    ) -> Option<Rc<RefCell<TEdge>>> {
         if direction == Direction::LeftToRight {
             e.borrow().next_in_ael.clone()
         } else {
@@ -1969,8 +2250,22 @@ impl Clipper {
 
     /// Checks if the edge is a minima.
     fn is_minima(&self, e: &Rc<RefCell<TEdge>>) -> bool {
-        e.borrow().prev.as_ref().unwrap().borrow().next_in_lml.as_ref().map_or(false, |next_in_lml| !Rc::ptr_eq(next_in_lml, e))
-            && e.borrow().next.as_ref().unwrap().borrow().next_in_lml.as_ref().map_or(false, |next_in_lml| !Rc::ptr_eq(next_in_lml, e))
+        e.borrow()
+            .prev
+            .as_ref()
+            .unwrap()
+            .borrow()
+            .next_in_lml
+            .as_ref()
+            .map_or(false, |next_in_lml| !Rc::ptr_eq(next_in_lml, e))
+            && e.borrow()
+                .next
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .next_in_lml
+                .as_ref()
+                .map_or(false, |next_in_lml| !Rc::ptr_eq(next_in_lml, e))
     }
 
     /// Checks if the edge is a maxima at the given Y coordinate.
@@ -1985,9 +2280,25 @@ impl Clipper {
 
     /// Gets the maxima pair for the given edge.
     fn get_maxima_pair(&self, e: &Rc<RefCell<TEdge>>) -> Option<Rc<RefCell<TEdge>>> {
-        if e.borrow().next.as_ref().unwrap().borrow().top == e.borrow().top && e.borrow().next.as_ref().unwrap().borrow().next_in_lml.is_none() {
+        if e.borrow().next.as_ref().unwrap().borrow().top == e.borrow().top
+            && e.borrow()
+                .next
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .next_in_lml
+                .is_none()
+        {
             Some(e.borrow().next.as_ref().unwrap().clone())
-        } else if e.borrow().prev.as_ref().unwrap().borrow().top == e.borrow().top && e.borrow().prev.as_ref().unwrap().borrow().next_in_lml.is_none() {
+        } else if e.borrow().prev.as_ref().unwrap().borrow().top == e.borrow().top
+            && e.borrow()
+                .prev
+                .as_ref()
+                .unwrap()
+                .borrow()
+                .next_in_lml
+                .is_none()
+        {
             Some(e.borrow().prev.as_ref().unwrap().clone())
         } else {
             None
@@ -1998,7 +2309,11 @@ impl Clipper {
     fn get_maxima_pair_ex(&self, e: &Rc<RefCell<TEdge>>) -> Option<Rc<RefCell<TEdge>>> {
         let result = self.get_maxima_pair(e);
         if let Some(ref result) = result {
-            if result.borrow().out_idx == SKIP || (result.borrow().next_in_ael.is_none() && result.borrow().prev_in_ael.is_none() && !self.base.is_horizontal(&result.borrow())) {
+            if result.borrow().out_idx == SKIP
+                || (result.borrow().next_in_ael.is_none()
+                    && result.borrow().prev_in_ael.is_none()
+                    && !self.base.is_horizontal(&result.borrow()))
+            {
                 return None;
             }
         }
@@ -2071,7 +2386,12 @@ impl Clipper {
             }
             if let Some(ref edge) = e {
                 if edge.borrow().prev_in_sel.is_some() {
-                    edge.borrow_mut().prev_in_sel.as_ref().unwrap().borrow_mut().next_in_sel = None;
+                    edge.borrow_mut()
+                        .prev_in_sel
+                        .as_ref()
+                        .unwrap()
+                        .borrow_mut()
+                        .next_in_sel = None;
                 } else {
                     break;
                 }
@@ -2082,8 +2402,13 @@ impl Clipper {
 
     /// Checks if the edges in the intersect node are adjacent.
     fn edges_adjacent(&self, inode: &IntersectNode) -> bool {
-        Rc::ptr_eq(&inode.edge1.as_ref().unwrap().borrow().next_in_sel, &inode.edge2)
-            || Rc::ptr_eq(&inode.edge1.as_ref().unwrap().borrow().prev_in_sel, &inode.edge2)
+        Rc::ptr_eq(
+            &inode.edge1.as_ref().unwrap().borrow().next_in_sel,
+            &inode.edge2,
+        ) || Rc::ptr_eq(
+            &inode.edge1.as_ref().unwrap().borrow().prev_in_sel,
+            &inode.edge2,
+        )
     }
 
     /// Sorts intersect nodes by their Y coordinate.
@@ -2228,7 +2553,9 @@ impl Clipper {
             e_next = e.borrow().next_in_ael.clone();
         }
 
-        if e.borrow().out_idx == UNASSIGNED && e_max_pair.as_ref().unwrap().borrow().out_idx == UNASSIGNED {
+        if e.borrow().out_idx == UNASSIGNED
+            && e_max_pair.as_ref().unwrap().borrow().out_idx == UNASSIGNED
+        {
             self.base.delete_from_ael(e);
             self.base.delete_from_ael(e_max_pair.as_ref().unwrap());
         } else if e.borrow().out_idx >= 0 && e_max_pair.as_ref().unwrap().borrow().out_idx >= 0 {
@@ -2332,7 +2659,12 @@ impl Clipper {
         let preserve_col = self.base.preserve_collinear || self.strictly_simple;
 
         loop {
-            if Rc::ptr_eq(&pp, &pp.borrow().prev.as_ref().unwrap()) || Rc::ptr_eq(&pp.borrow().prev.as_ref().unwrap(), &pp.borrow().next.as_ref().unwrap()) {
+            if Rc::ptr_eq(&pp, &pp.borrow().prev.as_ref().unwrap())
+                || Rc::ptr_eq(
+                    &pp.borrow().prev.as_ref().unwrap(),
+                    &pp.borrow().next.as_ref().unwrap(),
+                )
+            {
                 out_rec.pts = None;
                 return;
             }
@@ -2392,7 +2724,14 @@ impl Clipper {
     }
 
     /// Gets the overlap between two ranges.
-    fn get_overlap(a1: CInt, a2: CInt, b1: CInt, b2: CInt, left: &mut CInt, right: &mut CInt) -> bool {
+    fn get_overlap(
+        a1: CInt,
+        a2: CInt,
+        b1: CInt,
+        b2: CInt,
+        left: &mut CInt,
+        right: &mut CInt,
+    ) -> bool {
         if a1 < a2 {
             if b1 < b2 {
                 *left = a1.max(b1);
@@ -2580,7 +2919,9 @@ impl Clipper {
             {
                 op1b = op1b.borrow().next.clone().unwrap();
             }
-            if op1b.borrow().next.as_ref().unwrap() == op1 || op1b.borrow().next.as_ref().unwrap() == op2 {
+            if op1b.borrow().next.as_ref().unwrap() == op1
+                || op1b.borrow().next.as_ref().unwrap() == op2
+            {
                 return false;
             }
 
@@ -2597,12 +2938,21 @@ impl Clipper {
             {
                 op2b = op2b.borrow().next.clone().unwrap();
             }
-            if op2b.borrow().next.as_ref().unwrap() == op2 || op2b.borrow().next.as_ref().unwrap() == op1 {
+            if op2b.borrow().next.as_ref().unwrap() == op2
+                || op2b.borrow().next.as_ref().unwrap() == op1
+            {
                 return false;
             }
 
             let (left, right);
-            if !self.get_overlap(op1.borrow().pt.x, op1b.borrow().pt.x, op2.borrow().pt.x, op2b.borrow().pt.x, &mut left, &mut right) {
+            if !self.get_overlap(
+                op1.borrow().pt.x,
+                op1b.borrow().pt.x,
+                op2.borrow().pt.x,
+                op2b.borrow().pt.x,
+                &mut left,
+                &mut right,
+            ) {
                 return false;
             }
 
@@ -2629,14 +2979,24 @@ impl Clipper {
                 op1b = op1b.borrow().next.clone().unwrap();
             }
             let reverse1 = op1b.borrow().pt.y > op1.borrow().pt.y
-                || !self.slopes_equal(op1.borrow().pt, op1b.borrow().pt, j.off_pt, self.base.use_full_range);
+                || !self.slopes_equal(
+                    op1.borrow().pt,
+                    op1b.borrow().pt,
+                    j.off_pt,
+                    self.base.use_full_range,
+                );
             if reverse1 {
                 op1b = op1.borrow().prev.clone().unwrap();
                 while op1b.borrow().pt == op1.borrow().pt && op1b != op1 {
                     op1b = op1b.borrow().prev.clone().unwrap();
                 }
                 if op1b.borrow().pt.y > op1.borrow().pt.y
-                    || !self.slopes_equal(op1.borrow().pt, op1b.borrow().pt, j.off_pt, self.base.use_full_range)
+                    || !self.slopes_equal(
+                        op1.borrow().pt,
+                        op1b.borrow().pt,
+                        j.off_pt,
+                        self.base.use_full_range,
+                    )
                 {
                     return false;
                 }
@@ -2646,20 +3006,34 @@ impl Clipper {
                 op2b = op2b.borrow().next.clone().unwrap();
             }
             let reverse2 = op2b.borrow().pt.y > op2.borrow().pt.y
-                || !self.slopes_equal(op2.borrow().pt, op2b.borrow().pt, j.off_pt, self.base.use_full_range);
+                || !self.slopes_equal(
+                    op2.borrow().pt,
+                    op2b.borrow().pt,
+                    j.off_pt,
+                    self.base.use_full_range,
+                );
             if reverse2 {
                 op2b = op2.borrow().prev.clone().unwrap();
                 while op2b.borrow().pt == op2.borrow().pt && op2b != op2 {
                     op2b = op2b.borrow().prev.clone().unwrap();
                 }
                 if op2b.borrow().pt.y > op2.borrow().pt.y
-                    || !self.slopes_equal(op2.borrow().pt, op2b.borrow().pt, j.off_pt, self.base.use_full_range)
+                    || !self.slopes_equal(
+                        op2.borrow().pt,
+                        op2b.borrow().pt,
+                        j.off_pt,
+                        self.base.use_full_range,
+                    )
                 {
                     return false;
                 }
             }
 
-            if op1b == op1 || op2b == op2 || op1b == op2b || (out_rec1 == out_rec2 && reverse1 == reverse2) {
+            if op1b == op1
+                || op2b == op2
+                || op1b == op2b
+                || (out_rec1 == out_rec2 && reverse1 == reverse2)
+            {
                 return false;
             }
 
@@ -2797,11 +3171,18 @@ impl Clipper {
         true
     }
 
-    fn fixup_first_lefts1(&mut self, old_out_rec: &Rc<RefCell<OutRec>>, new_out_rec: &Rc<RefCell<OutRec>>) {
+    fn fixup_first_lefts1(
+        &mut self,
+        old_out_rec: &Rc<RefCell<OutRec>>,
+        new_out_rec: &Rc<RefCell<OutRec>>,
+    ) {
         for out_rec in &self.base.poly_outs {
             let first_left = Clipper::parse_first_left(&out_rec.first_left);
             if out_rec.pts.is_some() && Rc::ptr_eq(&first_left, old_out_rec) {
-                if Clipper::poly2_contains_poly1(out_rec.pts.as_ref().unwrap(), new_out_rec.borrow().pts.as_ref().unwrap()) {
+                if Clipper::poly2_contains_poly1(
+                    out_rec.pts.as_ref().unwrap(),
+                    new_out_rec.borrow().pts.as_ref().unwrap(),
+                ) {
                     out_rec.first_left = Some(new_out_rec.clone());
                 }
             }
@@ -2819,27 +3200,49 @@ impl Clipper {
         first_left.unwrap()
     }
 
-    fn fixup_first_lefts2(&mut self, inner_out_rec: &Rc<RefCell<OutRec>>, outer_out_rec: &Rc<RefCell<OutRec>>) {
+    fn fixup_first_lefts2(
+        &mut self,
+        inner_out_rec: &Rc<RefCell<OutRec>>,
+        outer_out_rec: &Rc<RefCell<OutRec>>,
+    ) {
         let orfl = outer_out_rec.borrow().first_left.clone();
         for out_rec in &self.base.poly_outs {
-            if out_rec.pts.is_none() || Rc::ptr_eq(out_rec, outer_out_rec) || Rc::ptr_eq(out_rec, inner_out_rec) {
+            if out_rec.pts.is_none()
+                || Rc::ptr_eq(out_rec, outer_out_rec)
+                || Rc::ptr_eq(out_rec, inner_out_rec)
+            {
                 continue;
             }
             let first_left = Clipper::parse_first_left(&out_rec.first_left);
-            if !Rc::ptr_eq(&first_left, &orfl) && !Rc::ptr_eq(&first_left, inner_out_rec) && !Rc::ptr_eq(&first_left, outer_out_rec) {
+            if !Rc::ptr_eq(&first_left, &orfl)
+                && !Rc::ptr_eq(&first_left, inner_out_rec)
+                && !Rc::ptr_eq(&first_left, outer_out_rec)
+            {
                 continue;
             }
-            if Clipper::poly2_contains_poly1(out_rec.pts.as_ref().unwrap(), inner_out_rec.borrow().pts.as_ref().unwrap()) {
+            if Clipper::poly2_contains_poly1(
+                out_rec.pts.as_ref().unwrap(),
+                inner_out_rec.borrow().pts.as_ref().unwrap(),
+            ) {
                 out_rec.first_left = Some(inner_out_rec.clone());
-            } else if Clipper::poly2_contains_poly1(out_rec.pts.as_ref().unwrap(), outer_out_rec.borrow().pts.as_ref().unwrap()) {
+            } else if Clipper::poly2_contains_poly1(
+                out_rec.pts.as_ref().unwrap(),
+                outer_out_rec.borrow().pts.as_ref().unwrap(),
+            ) {
                 out_rec.first_left = Some(outer_out_rec.clone());
-            } else if Rc::ptr_eq(&out_rec.first_left, inner_out_rec) || Rc::ptr_eq(&out_rec.first_left, outer_out_rec) {
+            } else if Rc::ptr_eq(&out_rec.first_left, inner_out_rec)
+                || Rc::ptr_eq(&out_rec.first_left, outer_out_rec)
+            {
                 out_rec.first_left = orfl.clone();
             }
         }
     }
 
-    fn fixup_first_lefts3(&mut self, old_out_rec: &Rc<RefCell<OutRec>>, new_out_rec: &Rc<RefCell<OutRec>>) {
+    fn fixup_first_lefts3(
+        &mut self,
+        old_out_rec: &Rc<RefCell<OutRec>>,
+        new_out_rec: &Rc<RefCell<OutRec>>,
+    ) {
         for out_rec in &self.base.poly_outs {
             let first_left = Clipper::parse_first_left(&out_rec.first_left);
             if out_rec.pts.is_some() && Rc::ptr_eq(&first_left, old_out_rec) {
@@ -2881,7 +3284,10 @@ impl Clipper {
                 out_rec2.pts = Some(join.out_pt2.clone().unwrap());
                 self.update_out_pt_idxs(&out_rec2);
 
-                if Clipper::poly2_contains_poly1(out_rec2.pts.as_ref().unwrap(), out_rec1.borrow().pts.as_ref().unwrap()) {
+                if Clipper::poly2_contains_poly1(
+                    out_rec2.pts.as_ref().unwrap(),
+                    out_rec1.borrow().pts.as_ref().unwrap(),
+                ) {
                     out_rec2.is_hole = !out_rec1.borrow().is_hole;
                     out_rec2.first_left = Some(out_rec1.clone());
 
@@ -2892,7 +3298,10 @@ impl Clipper {
                     if (out_rec2.is_hole ^ self.reverse_solution) == (self.area(&out_rec2) > 0.0) {
                         self.reverse_poly_pt_links(out_rec2.pts.as_ref().unwrap());
                     }
-                } else if Clipper::poly2_contains_poly1(out_rec1.borrow().pts.as_ref().unwrap(), out_rec2.pts.as_ref().unwrap()) {
+                } else if Clipper::poly2_contains_poly1(
+                    out_rec1.borrow().pts.as_ref().unwrap(),
+                    out_rec2.pts.as_ref().unwrap(),
+                ) {
                     out_rec2.is_hole = out_rec1.borrow().is_hole;
                     out_rec1.borrow_mut().is_hole = !out_rec2.is_hole;
                     out_rec2.first_left = out_rec1.borrow().first_left.clone();
@@ -2902,7 +3311,9 @@ impl Clipper {
                         self.fixup_first_lefts2(&out_rec1, &out_rec2);
                     }
 
-                    if (out_rec1.borrow().is_hole ^ self.reverse_solution) == (self.area(&out_rec1) > 0.0) {
+                    if (out_rec1.borrow().is_hole ^ self.reverse_solution)
+                        == (self.area(&out_rec1) > 0.0)
+                    {
                         self.reverse_poly_pt_links(out_rec1.borrow().pts.as_ref().unwrap());
                     }
                 } else {
@@ -2954,7 +3365,10 @@ impl Clipper {
             loop {
                 let mut op2 = op.borrow().next.as_ref().unwrap().clone();
                 while !Rc::ptr_eq(&op2, out_rec.pts.as_ref().unwrap()) {
-                    if op.borrow().pt == op2.borrow().pt && !Rc::ptr_eq(&op2.borrow().next.as_ref().unwrap(), &op) && !Rc::ptr_eq(&op2.borrow().prev.as_ref().unwrap(), &op) {
+                    if op.borrow().pt == op2.borrow().pt
+                        && !Rc::ptr_eq(&op2.borrow().next.as_ref().unwrap(), &op)
+                        && !Rc::ptr_eq(&op2.borrow().prev.as_ref().unwrap(), &op)
+                    {
                         let op3 = op.borrow().prev.as_ref().unwrap().clone();
                         let op4 = op2.borrow().prev.as_ref().unwrap().clone();
                         op.borrow_mut().prev = Some(op4.clone());
@@ -2966,13 +3380,19 @@ impl Clipper {
                         let mut out_rec2 = self.base.create_out_rec();
                         out_rec2.pts = Some(op2.clone());
                         self.update_out_pt_idxs(&out_rec2);
-                        if Clipper::poly2_contains_poly1(out_rec2.pts.as_ref().unwrap(), out_rec.pts.as_ref().unwrap()) {
+                        if Clipper::poly2_contains_poly1(
+                            out_rec2.pts.as_ref().unwrap(),
+                            out_rec.pts.as_ref().unwrap(),
+                        ) {
                             out_rec2.is_hole = !out_rec.is_hole;
                             out_rec2.first_left = Some(out_rec.clone());
                             if self.using_poly_tree {
                                 self.fixup_first_lefts2(&out_rec2, &out_rec);
                             }
-                        } else if Clipper::poly2_contains_poly1(out_rec.pts.as_ref().unwrap(), out_rec2.pts.as_ref().unwrap()) {
+                        } else if Clipper::poly2_contains_poly1(
+                            out_rec.pts.as_ref().unwrap(),
+                            out_rec2.pts.as_ref().unwrap(),
+                        ) {
                             out_rec2.is_hole = out_rec.is_hole;
                             out_rec.is_hole = !out_rec2.is_hole;
                             out_rec2.first_left = out_rec.first_left.clone();
@@ -2999,7 +3419,6 @@ impl Clipper {
         }
     }
 
-    
     pub fn area(poly: &Path) -> f64 {
         let cnt = poly.len();
         if cnt < 3 {
@@ -3017,7 +3436,7 @@ impl Clipper {
     fn area_out_rec(&self, out_rec: &OutRec) -> f64 {
         Clipper::area(&self.convert_out_pt_to_path(out_rec.pts.as_ref().unwrap()))
     }
-    
+
     fn convert_out_pt_to_path(&self, out_pt: &Rc<RefCell<OutPt>>) -> Path {
         let mut path = Vec::new();
         let mut current = out_pt.clone();
@@ -3039,8 +3458,10 @@ impl Clipper {
         let mut a = 0.0;
         let mut op = op.clone();
         loop {
-            a += (op.borrow().prev.as_ref().unwrap().borrow().pt.x as f64 + op.borrow().pt.x as f64)
-                * (op.borrow().prev.as_ref().unwrap().borrow().pt.y as f64 - op.borrow().pt.y as f64);
+            a += (op.borrow().prev.as_ref().unwrap().borrow().pt.x as f64
+                + op.borrow().pt.x as f64)
+                * (op.borrow().prev.as_ref().unwrap().borrow().pt.y as f64
+                    - op.borrow().pt.y as f64);
             op = op.borrow().next.as_ref().unwrap().clone();
             if Rc::ptr_eq(&op, &op_first) {
                 break;
@@ -3053,7 +3474,7 @@ impl Clipper {
     pub fn simplify_polygon(poly: &Path, fill_type: PolyFillType) -> Paths {
         let mut result: Paths = Vec::new();
         let mut c = Clipper::new(0); // assume a default constructor exists
-        c.strictly_simple = true;    // set strictly_simple flag, if available
+        c.strictly_simple = true; // set strictly_simple flag, if available
         c.add_path(poly.clone(), PolyType::Subject, true);
         c.execute(ClipType::Union, &mut result, fill_type);
         result
@@ -3086,7 +3507,12 @@ impl Clipper {
     }
 
     /// Returns true if the three points are nearly collinear within the given squared distance tolerance.
-    pub fn slopes_near_collinear(pt1: &IntPoint, pt2: &IntPoint, pt3: &IntPoint, dist_sqrd: f64) -> bool {
+    pub fn slopes_near_collinear(
+        pt1: &IntPoint,
+        pt2: &IntPoint,
+        pt3: &IntPoint,
+        dist_sqrd: f64,
+    ) -> bool {
         if (pt1.x - pt2.x).abs() > (pt1.y - pt2.y).abs() {
             if ((pt1.x > pt2.x) == (pt1.x < pt3.x)) {
                 Self::distance_from_line_sqrd(pt1, pt2, pt3) < dist_sqrd
@@ -3153,9 +3579,16 @@ impl Clipper {
         let mut op = out_pts[0].clone();
         // Mark vertices that fail cleaning by processing until a vertex has been marked.
         while op.borrow().idx == 0
-            && !Rc::ptr_eq(op.borrow().next.as_ref().unwrap(), op.borrow().prev.as_ref().unwrap())
+            && !Rc::ptr_eq(
+                op.borrow().next.as_ref().unwrap(),
+                op.borrow().prev.as_ref().unwrap(),
+            )
         {
-            if Self::points_are_close(&op.borrow().pt, &op.borrow().prev.as_ref().unwrap().borrow().pt, dist_sqrd) {
+            if Self::points_are_close(
+                &op.borrow().pt,
+                &op.borrow().prev.as_ref().unwrap().borrow().pt,
+                dist_sqrd,
+            ) {
                 op = Self::exclude_op(&op);
             } else if Self::points_are_close(
                 &op.borrow().prev.as_ref().unwrap().borrow().pt,
@@ -3202,11 +3635,11 @@ impl Clipper {
 
     /// Cleans multiple polygons.
     pub fn clean_polygons(polys: &Paths, distance: f64) -> Paths {
-         let mut result = Vec::with_capacity(polys.len());
-         for poly in polys {
-             result.push(Self::clean_polygon(poly, distance));
-         }
-         result
+        let mut result = Vec::with_capacity(polys.len());
+        for poly in polys {
+            result.push(Self::clean_polygon(poly, distance));
+        }
+        result
     }
 
     /// Constructs Minkowski sum/difference polygons.
@@ -3253,8 +3686,12 @@ impl Clipper {
     pub fn minkowski_sum(pattern: &Path, path: &Path, path_is_closed: bool) -> Paths {
         let mut paths = Self::minkowski(pattern, path, true, path_is_closed);
         let mut c = Clipper::new(0);
-        c.add_paths(&paths, PolyType::Subject, true);
-        let _ = c.execute(ClipType::Union, &mut paths, PolyFillType::NonZero, PolyFillType::NonZero);
+        c.base.add_paths(&paths, PolyType::Subject, true);
+        let _ = c.execute(
+            ClipType::Union,
+            &mut paths,
+            PolyFillType::NonZero
+        );
         paths
     }
 
@@ -3271,13 +3708,17 @@ impl Clipper {
         let mut c = Clipper::new(0);
         for path in paths {
             let tmp = Self::minkowski(pattern, path, true, path_is_closed);
-            c.add_paths(&tmp, PolyType::Subject, true);
+            c.base.add_paths(&tmp, PolyType::Subject, true);
             if path_is_closed {
                 let translated = Self::translate_path(path, &pattern[0]);
-                c.add_path(&translated, PolyType::Clip, true);
+                c.base.add_path(&translated, PolyType::Clip, true);
             }
         }
-        let _ = c.execute(ClipType::Union, &mut solution, PolyFillType::NonZero, PolyFillType::NonZero);
+        let _ = c.execute(
+            ClipType::Union,
+            &mut solution,
+            PolyFillType::NonZero,
+        );
         solution
     }
 
@@ -3285,8 +3726,12 @@ impl Clipper {
     pub fn minkowski_diff(poly1: &Path, poly2: &Path) -> Paths {
         let paths = Self::minkowski(poly1, poly2, false, true);
         let mut c = Clipper::new(0);
-        c.add_paths(&paths, PolyType::Subject, true);
-        let _ = c.execute(ClipType::Union, &mut paths, PolyFillType::NonZero, PolyFillType::NonZero);
+        c.base.add_paths(&paths, PolyType::Subject, true);
+        let _ = c.execute(
+            ClipType::Union,
+            &mut paths,
+            PolyFillType::NonZero
+        );
         paths
     }
 
@@ -3315,7 +3760,7 @@ impl Clipper {
 
     /// Extracts open paths from a PolyTree.
     pub fn open_paths_from_poly_tree(polytree: &PolyTree) -> Paths {
-        let mut result = Paths::with_capacity(polytree.child_count());
+        let mut result = Paths::with_capacity(polytree.root.child_count());
         for child in &polytree.root.childs {
             if child.is_open {
                 result.push(child.polygon.clone());
@@ -3517,7 +3962,7 @@ impl ClipperOffset {
     /// If the computed `r` is less than the miter limit then it's clamped (or you might choose a different join).
     fn do_miter(&self, j: usize, k: usize, r: f64) {
         let q = self.delta / r;
-        self.dest_poly.Add(IntPoint::new(
+        self.dest_poly.as_mut().unwrap().push(IntPoint::new(
             ClipperOffset::round(self.src_poly[j].x + (self.normals[k].x + self.normals[j].x) * q),
             ClipperOffset::round(self.src_poly[j].y + (self.normals[k].y + self.normals[j].y) * q),
         ));
@@ -3540,23 +3985,23 @@ impl ClipperOffset {
         let dx = (self
             .sin_a
             .atan2(self.normals[k].x * self.normals[j].x + self.normals[k].y * self.normals[j].y)
-            / 4)
-        .tan();
+            / 4 as f64)
+            .tan();
 
-        self.dest_poly.Add(IntPoint::new(
+        self.dest_poly.as_mut().unwrap().push(IntPoint::new(
             ClipperOffset::round(
-                self.src_poly[j].x + self.delta * (m_normals[k].x - self.normals[k].y * dx),
+                self.src_poly[j].x + self.delta * (self.normals[k].x - self.normals[k].y * dx),
             ),
             ClipperOffset::round(
-                self.src_poly[j].y + self.delta * (m_normals[k].y + self.normals[k].x * dx),
+                self.src_poly[j].y + self.delta * (self.normals[k].y + self.normals[k].x * dx),
             ),
         ));
-        self.dest_poly.Add(IntPoint::new(
+        self.dest_poly.as_mut().unwrap().push(IntPoint::new(
             ClipperOffset::round(
-                self.src_poly[j].x + self.delta * (m_normals[j].x + self.normals[j].y * dx),
+                self.src_poly[j].x + self.delta * (self.normals[j].x + self.normals[j].y * dx),
             ),
             ClipperOffset::round(
-                self.src_poly[j].y + self.delta * (m_normals[j].y - self.normals[j].x * dx),
+                self.src_poly[j].y + self.delta * (self.normals[j].y - self.normals[j].x * dx),
             ),
         ));
     }
@@ -3597,16 +4042,24 @@ impl ClipperOffset {
 
     fn offset_point(&mut self, j: usize, k: &mut usize, jointype: JoinType) {
         // Cross product
-        self.sin_a = self.normals[*k].x * self.normals[j].y - self.normals[j].x * self.normals[*k].y;
+        self.sin_a =
+            self.normals[*k].x * self.normals[j].y - self.normals[j].x * self.normals[*k].y;
 
         if (self.sin_a * self.delta).abs() < 1.0 {
             // Dot product
-            let cos_a = self.normals[*k].x * self.normals[j].x + self.normals[j].y * self.normals[*k].y;
+            let cos_a =
+                self.normals[*k].x * self.normals[j].x + self.normals[j].y * self.normals[*k].y;
             if cos_a > 0.0 {
                 // Angle ==> 0 degrees
                 self.dest_poly.as_mut().unwrap().push(IntPoint::new(
-                    ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].x as f64 + self.normals[*k].x * self.delta),
-                    ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].y as f64 + self.normals[*k].y * self.delta),
+                    ClipperOffset::round(
+                        self.src_poly.as_ref().unwrap()[j].x as f64
+                            + self.normals[*k].x * self.delta,
+                    ),
+                    ClipperOffset::round(
+                        self.src_poly.as_ref().unwrap()[j].y as f64
+                            + self.normals[*k].y * self.delta,
+                    ),
                 ));
                 return;
             }
@@ -3619,18 +4072,31 @@ impl ClipperOffset {
 
         if self.sin_a * self.delta < 0.0 {
             self.dest_poly.as_mut().unwrap().push(IntPoint::new(
-                ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].x as f64 + self.normals[*k].x * self.delta),
-                ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].y as f64 + self.normals[*k].y * self.delta),
+                ClipperOffset::round(
+                    self.src_poly.as_ref().unwrap()[j].x as f64 + self.normals[*k].x * self.delta,
+                ),
+                ClipperOffset::round(
+                    self.src_poly.as_ref().unwrap()[j].y as f64 + self.normals[*k].y * self.delta,
+                ),
             ));
-            self.dest_poly.as_mut().unwrap().push(self.src_poly.as_ref().unwrap()[j]);
+            self.dest_poly
+                .as_mut()
+                .unwrap()
+                .push(self.src_poly.as_ref().unwrap()[j]);
             self.dest_poly.as_mut().unwrap().push(IntPoint::new(
-                ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].x as f64 + self.normals[j].x * self.delta),
-                ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].y as f64 + self.normals[j].y * self.delta),
+                ClipperOffset::round(
+                    self.src_poly.as_ref().unwrap()[j].x as f64 + self.normals[j].x * self.delta,
+                ),
+                ClipperOffset::round(
+                    self.src_poly.as_ref().unwrap()[j].y as f64 + self.normals[j].y * self.delta,
+                ),
             ));
         } else {
             match jointype {
                 JoinType::Miter => {
-                    let r = 1.0 + (self.normals[j].x * self.normals[*k].x + self.normals[j].y * self.normals[*k].y);
+                    let r = 1.0
+                        + (self.normals[j].x * self.normals[*k].x
+                            + self.normals[j].y * self.normals[*k].y);
                     if r >= self.miter_lim {
                         self.do_miter(j, *k, r);
                     } else {
@@ -3642,6 +4108,31 @@ impl ClipperOffset {
             }
         }
         *k = j;
+    }
+
+    /// Fixes the orientations of all closed paths if the orientation of the
+    /// closed path with the lowermost vertex is wrong.
+    pub fn fix_orientations(&mut self) {
+        if let Some(lowest) = self.lowest {
+            if lowest.x >= 0
+                && !Clipper::orientation(&self.poly_nodes.childs[lowest.x as usize].polygon)
+            {
+                for node in &mut self.poly_nodes.childs {
+                    if node.endtype == EndType::ClosedPolygon
+                        || (node.endtype == EndType::ClosedLine
+                            && Clipper::orientation(&node.polygon))
+                    {
+                        node.polygon.reverse();
+                    }
+                }
+            } else {
+                for node in &mut self.poly_nodes.childs {
+                    if node.endtype == EndType::ClosedLine && !Clipper::orientation(&node.polygon) {
+                        node.polygon.reverse();
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -3934,7 +4425,12 @@ impl ClipperBase {
     pub fn point_on_polygon(&self, pt: IntPoint, pp: &OutPt, use_full_range: bool) -> bool {
         let mut pp2 = pp;
         loop {
-            if self.point_on_line_segment(pt, pp2.pt, pp2.next.as_ref().unwrap().borrow().pt, use_full_range) {
+            if self.point_on_line_segment(
+                pt,
+                pp2.pt,
+                pp2.next.as_ref().unwrap().borrow().pt,
+                use_full_range,
+            ) {
                 return true;
             }
             pp2 = &pp2.next.as_ref().unwrap().borrow();
@@ -3992,7 +4488,13 @@ impl ClipperBase {
         self.dispose_local_minima_list();
         for edge_list in &mut self.edges {
             for edge in edge_list {
-                *edge = TEdge::new(IntPoint::new(0, 0), IntPoint::new(0, 0), PolyType::Subject, EdgeSide::Left, 0);
+                *edge = TEdge::new(
+                    IntPoint::new(0, 0),
+                    IntPoint::new(0, 0),
+                    PolyType::Subject,
+                    EdgeSide::Left,
+                    0,
+                );
             }
             edge_list.clear();
         }
@@ -4071,7 +4573,11 @@ impl ClipperBase {
     }
 
     /// Processes an edge bound.
-    pub fn process_bound(&mut self, mut e: Rc<RefCell<TEdge>>, left_bound_is_forward: bool) -> Rc<RefCell<TEdge>> {
+    pub fn process_bound(
+        &mut self,
+        mut e: Rc<RefCell<TEdge>>,
+        left_bound_is_forward: bool,
+    ) -> Rc<RefCell<TEdge>> {
         let mut e_start: Rc<RefCell<TEdge>>;
         let mut result = e.clone();
         let mut horz: Rc<RefCell<TEdge>>;
@@ -4132,7 +4638,9 @@ impl ClipperBase {
             }
             if e_start.borrow().dx == HORIZONTAL {
                 // i.e., an adjoining horizontal skip edge.
-                if e_start.borrow().bot.x != e.borrow().bot.x && e_start.borrow().top.x != e.borrow().bot.x {
+                if e_start.borrow().bot.x != e.borrow().bot.x
+                    && e_start.borrow().top.x != e.borrow().bot.x
+                {
                     self.reverse_horizontal(&e);
                 }
             } else if e_start.borrow().bot.x != e.borrow().bot.x {
@@ -4142,10 +4650,14 @@ impl ClipperBase {
 
         e_start = e.clone();
         if left_bound_is_forward {
-            while result.borrow().top.y == result.borrow().next.as_ref().unwrap().borrow().bot.y && result.borrow().next.as_ref().unwrap().borrow().out_idx != SKIP {
+            while result.borrow().top.y == result.borrow().next.as_ref().unwrap().borrow().bot.y
+                && result.borrow().next.as_ref().unwrap().borrow().out_idx != SKIP
+            {
                 result = result.borrow().next.as_ref().unwrap().clone();
             }
-            if result.borrow().dx == HORIZONTAL && result.borrow().next.as_ref().unwrap().borrow().out_idx != SKIP {
+            if result.borrow().dx == HORIZONTAL
+                && result.borrow().next.as_ref().unwrap().borrow().out_idx != SKIP
+            {
                 // At the top of a bound, horizontals are added to the bound
                 // only when the preceding edge attaches to the horizontal's left vertex
                 // unless a Skip edge is encountered when that becomes the top divide.
@@ -4153,43 +4665,65 @@ impl ClipperBase {
                 while horz.borrow().prev.as_ref().unwrap().borrow().dx == HORIZONTAL {
                     horz = horz.borrow().prev.as_ref().unwrap().clone();
                 }
-                if horz.borrow().prev.as_ref().unwrap().borrow().top.x > result.borrow().next.as_ref().unwrap().borrow().top.x {
+                if horz.borrow().prev.as_ref().unwrap().borrow().top.x
+                    > result.borrow().next.as_ref().unwrap().borrow().top.x
+                {
                     result = horz.borrow().prev.as_ref().unwrap().clone();
                 }
             }
             while e != result {
                 e.borrow_mut().next_in_lml = Some(e.borrow().next.as_ref().unwrap().clone());
-                if e.borrow().dx == HORIZONTAL && e != e_start && e.borrow().bot.x != e.borrow().prev.as_ref().unwrap().borrow().top.x {
+                if e.borrow().dx == HORIZONTAL
+                    && e != e_start
+                    && e.borrow().bot.x != e.borrow().prev.as_ref().unwrap().borrow().top.x
+                {
                     self.reverse_horizontal(&e);
                 }
                 e = e.borrow().next.as_ref().unwrap().clone();
             }
-            if e.borrow().dx == HORIZONTAL && e != e_start && e.borrow().bot.x != e.borrow().prev.as_ref().unwrap().borrow().top.x {
+            if e.borrow().dx == HORIZONTAL
+                && e != e_start
+                && e.borrow().bot.x != e.borrow().prev.as_ref().unwrap().borrow().top.x
+            {
                 self.reverse_horizontal(&e);
             }
             result = result.borrow().next.as_ref().unwrap().clone(); // Move to the edge just beyond current bound.
         } else {
-            while result.borrow().top.y == result.borrow().prev.as_ref().unwrap().borrow().bot.y && result.borrow().prev.as_ref().unwrap().borrow().out_idx != SKIP {
+            while result.borrow().top.y == result.borrow().prev.as_ref().unwrap().borrow().bot.y
+                && result.borrow().prev.as_ref().unwrap().borrow().out_idx != SKIP
+            {
                 result = result.borrow().prev.as_ref().unwrap().clone();
             }
-            if result.borrow().dx == HORIZONTAL && result.borrow().prev.as_ref().unwrap().borrow().out_idx != SKIP {
+            if result.borrow().dx == HORIZONTAL
+                && result.borrow().prev.as_ref().unwrap().borrow().out_idx != SKIP
+            {
                 horz = result.clone();
                 while horz.borrow().next.as_ref().unwrap().borrow().dx == HORIZONTAL {
                     horz = horz.borrow().next.as_ref().unwrap().clone();
                 }
-                if horz.borrow().next.as_ref().unwrap().borrow().top.x == result.borrow().prev.as_ref().unwrap().borrow().top.x || horz.borrow().next.as_ref().unwrap().borrow().top.x > result.borrow().prev.as_ref().unwrap().borrow().top.x {
+                if horz.borrow().next.as_ref().unwrap().borrow().top.x
+                    == result.borrow().prev.as_ref().unwrap().borrow().top.x
+                    || horz.borrow().next.as_ref().unwrap().borrow().top.x
+                        > result.borrow().prev.as_ref().unwrap().borrow().top.x
+                {
                     result = horz.borrow().next.as_ref().unwrap().clone();
                 }
             }
 
             while e != result {
                 e.borrow_mut().next_in_lml = Some(e.borrow().prev.as_ref().unwrap().clone());
-                if e.borrow().dx == HORIZONTAL && e != e_start && e.borrow().bot.x != e.borrow().next.as_ref().unwrap().borrow().top.x {
+                if e.borrow().dx == HORIZONTAL
+                    && e != e_start
+                    && e.borrow().bot.x != e.borrow().next.as_ref().unwrap().borrow().top.x
+                {
                     self.reverse_horizontal(&e);
                 }
                 e = e.borrow().prev.as_ref().unwrap().clone();
             }
-            if e.borrow().dx == HORIZONTAL && e != e_start && e.borrow().bot.x != e.borrow().next.as_ref().unwrap().borrow().top.x {
+            if e.borrow().dx == HORIZONTAL
+                && e != e_start
+                && e.borrow().bot.x != e.borrow().next.as_ref().unwrap().borrow().top.x
+            {
                 self.reverse_horizontal(&e);
             }
             result = result.borrow().prev.as_ref().unwrap().clone(); // Move to the edge just beyond current bound.
@@ -4365,11 +4899,16 @@ impl ClipperBase {
     /// Swaps positions of two edges in the active edge list.
     pub fn swap_positions_in_ael(&mut self, edge1: &mut TEdge, edge2: &mut TEdge) {
         // Check that one or other edge hasn't already been removed from AEL ...
-        if Rc::ptr_eq(&edge1.next_in_ael, &edge1.prev_in_ael) || Rc::ptr_eq(&edge2.next_in_ael, &edge2.prev_in_ael) {
+        if Rc::ptr_eq(&edge1.next_in_ael, &edge1.prev_in_ael)
+            || Rc::ptr_eq(&edge2.next_in_ael, &edge2.prev_in_ael)
+        {
             return;
         }
 
-        if Rc::ptr_eq(&edge1.next_in_ael, &Some(Rc::new(RefCell::new(edge2.clone())))) {
+        if Rc::ptr_eq(
+            &edge1.next_in_ael,
+            &Some(Rc::new(RefCell::new(edge2.clone()))),
+        ) {
             let next = edge2.next_in_ael.clone();
             if let Some(ref next) = next {
                 next.borrow_mut().prev_in_ael = Some(Rc::new(RefCell::new(edge1.clone())));
@@ -4382,7 +4921,10 @@ impl ClipperBase {
             edge2.next_in_ael = Some(Rc::new(RefCell::new(edge1.clone())));
             edge1.prev_in_ael = Some(Rc::new(RefCell::new(edge2.clone())));
             edge1.next_in_ael = next;
-        } else if Rc::ptr_eq(&edge2.next_in_ael, &Some(Rc::new(RefCell::new(edge1.clone())))) {
+        } else if Rc::ptr_eq(
+            &edge2.next_in_ael,
+            &Some(Rc::new(RefCell::new(edge1.clone()))),
+        ) {
             let next = edge1.next_in_ael.clone();
             if let Some(ref next) = next {
                 next.borrow_mut().prev_in_ael = Some(Rc::new(RefCell::new(edge2.clone())));
@@ -4427,7 +4969,10 @@ impl ClipperBase {
     pub fn delete_from_ael(&mut self, e: &TEdge) {
         let ael_prev = e.prev_in_ael.clone();
         let ael_next = e.next_in_ael.clone();
-        if ael_prev.is_none() && ael_next.is_none() && !Rc::ptr_eq(&Some(Rc::new(RefCell::new(e.clone()))), &self.active_edges) {
+        if ael_prev.is_none()
+            && ael_next.is_none()
+            && !Rc::ptr_eq(&Some(Rc::new(RefCell::new(e.clone()))), &self.active_edges)
+        {
             return; // already deleted
         }
         if let Some(ref ael_prev) = ael_prev {
@@ -4470,7 +5015,13 @@ impl ClipperBase {
         // Create a new edge array.
         let mut edges: Vec<TEdge> = Vec::with_capacity((high_i + 1) as usize);
         for _ in 0..=high_i {
-            edges.push(TEdge::new(IntPoint::new(0, 0), IntPoint::new(0, 0), poly_type, EdgeSide::Left, 0));
+            edges.push(TEdge::new(
+                IntPoint::new(0, 0),
+                IntPoint::new(0, 0),
+                poly_type,
+                EdgeSide::Left,
+                0,
+            ));
         }
 
         let mut is_flat = true;
@@ -4480,10 +5031,20 @@ impl ClipperBase {
         self.range_test(pg[0], &mut self.use_full_range);
         self.range_test(pg[high_i as usize], &mut self.use_full_range);
         self.init_edge(&mut edges[0], &edges[1], &edges[high_i as usize], pg[0]);
-        self.init_edge(&mut edges[high_i as usize], &edges[0], &edges[(high_i - 1) as usize], pg[high_i as usize]);
+        self.init_edge(
+            &mut edges[high_i as usize],
+            &edges[0],
+            &edges[(high_i - 1) as usize],
+            pg[high_i as usize],
+        );
         for i in (1..high_i).rev() {
             self.range_test(pg[i as usize], &mut self.use_full_range);
-            self.init_edge(&mut edges[i as usize], &edges[(i + 1) as usize], &edges[(i - 1) as usize], pg[i as usize]);
+            self.init_edge(
+                &mut edges[i as usize],
+                &edges[(i + 1) as usize],
+                &edges[(i - 1) as usize],
+                pg[i as usize],
+            );
         }
         let mut e_start = Rc::new(RefCell::new(edges[0].clone()));
 
@@ -4491,7 +5052,9 @@ impl ClipperBase {
         let mut e = e_start.clone();
         let mut e_loop_stop = e_start.clone();
         loop {
-            if e.borrow().curr == e.borrow().next.as_ref().unwrap().borrow().curr && (closed || e.borrow().next.as_ref().unwrap() != e_start) {
+            if e.borrow().curr == e.borrow().next.as_ref().unwrap().borrow().curr
+                && (closed || e.borrow().next.as_ref().unwrap() != e_start)
+            {
                 if Rc::ptr_eq(&e, &e.borrow().next.as_ref().unwrap()) {
                     break;
                 }
@@ -4502,9 +5065,25 @@ impl ClipperBase {
                 e_loop_stop = e.clone();
                 continue;
             }
-            if Rc::ptr_eq(&e.borrow().prev.as_ref().unwrap(), &e.borrow().next.as_ref().unwrap()) {
+            if Rc::ptr_eq(
+                &e.borrow().prev.as_ref().unwrap(),
+                &e.borrow().next.as_ref().unwrap(),
+            ) {
                 break; // Only two vertices.
-            } else if closed && self.slopes_equal_points(e.borrow().prev.as_ref().unwrap().borrow().curr, e.borrow().curr, e.borrow().next.as_ref().unwrap().borrow().curr, self.use_full_range) && (!self.preserve_collinear || !self.pt2_is_between_pt1_and_pt3(e.borrow().prev.as_ref().unwrap().borrow().curr, e.borrow().curr, e.borrow().next.as_ref().unwrap().borrow().curr)) {
+            } else if closed
+                && self.slopes_equal_points(
+                    e.borrow().prev.as_ref().unwrap().borrow().curr,
+                    e.borrow().curr,
+                    e.borrow().next.as_ref().unwrap().borrow().curr,
+                    self.use_full_range,
+                )
+                && (!self.preserve_collinear
+                    || !self.pt2_is_between_pt1_and_pt3(
+                        e.borrow().prev.as_ref().unwrap().borrow().curr,
+                        e.borrow().curr,
+                        e.borrow().next.as_ref().unwrap().borrow().curr,
+                    ))
+            {
                 // Collinear edges are allowed for open paths but in closed paths
                 // the default is to merge adjacent collinear edges into a single edge.
                 // However, if the PreserveCollinear property is enabled, only overlapping
@@ -4518,18 +5097,32 @@ impl ClipperBase {
                 continue;
             }
             e = e.borrow().next.as_ref().unwrap().clone();
-            if Rc::ptr_eq(&e, &e_loop_stop) || (!closed && Rc::ptr_eq(&e.borrow().next.as_ref().unwrap(), &e_start)) {
+            if Rc::ptr_eq(&e, &e_loop_stop)
+                || (!closed && Rc::ptr_eq(&e.borrow().next.as_ref().unwrap(), &e_start))
+            {
                 break;
             }
         }
 
-        if (!closed && Rc::ptr_eq(&e, &e.borrow().next.as_ref().unwrap())) || (closed && Rc::ptr_eq(&e.borrow().prev.as_ref().unwrap(), &e.borrow().next.as_ref().unwrap())) {
+        if (!closed && Rc::ptr_eq(&e, &e.borrow().next.as_ref().unwrap()))
+            || (closed
+                && Rc::ptr_eq(
+                    &e.borrow().prev.as_ref().unwrap(),
+                    &e.borrow().next.as_ref().unwrap(),
+                ))
+        {
             return false;
         }
 
         if !closed {
             self.has_open_paths = true;
-            e_start.borrow_mut().prev.as_ref().unwrap().borrow_mut().out_idx = SKIP;
+            e_start
+                .borrow_mut()
+                .prev
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .out_idx = SKIP;
         }
 
         // 3. Do second stage of edge initialization.
@@ -4558,7 +5151,12 @@ impl ClipperBase {
                 right_bound: Some(e.clone()),
             };
             loc_min.right_bound.as_ref().unwrap().borrow_mut().side = EdgeSide::Right;
-            loc_min.right_bound.as_ref().unwrap().borrow_mut().wind_delta = 0;
+            loc_min
+                .right_bound
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .wind_delta = 0;
             loop {
                 if e.borrow().bot.x != e.borrow().prev.as_ref().unwrap().borrow().top.x {
                     self.reverse_horizontal(&e);
@@ -4578,7 +5176,9 @@ impl ClipperBase {
         let mut left_bound_is_forward;
         let mut e_min: Option<Rc<RefCell<TEdge>>> = None;
 
-        if e.borrow().prev.as_ref().unwrap().borrow().bot == e.borrow().prev.as_ref().unwrap().borrow().top {
+        if e.borrow().prev.as_ref().unwrap().borrow().bot
+            == e.borrow().prev.as_ref().unwrap().borrow().top
+        {
             e = e.borrow().next.as_ref().unwrap().clone();
         }
 
@@ -4610,19 +5210,40 @@ impl ClipperBase {
 
             if !closed {
                 loc_min.left_bound.as_ref().unwrap().borrow_mut().wind_delta = 0;
-            } else if Rc::ptr_eq(&loc_min.left_bound.as_ref().unwrap().borrow().next.as_ref().unwrap(), &loc_min.right_bound.as_ref().unwrap()) {
+            } else if Rc::ptr_eq(
+                &loc_min
+                    .left_bound
+                    .as_ref()
+                    .unwrap()
+                    .borrow()
+                    .next
+                    .as_ref()
+                    .unwrap(),
+                &loc_min.right_bound.as_ref().unwrap(),
+            ) {
                 loc_min.left_bound.as_ref().unwrap().borrow_mut().wind_delta = -1;
             } else {
                 loc_min.left_bound.as_ref().unwrap().borrow_mut().wind_delta = 1;
             }
-            loc_min.right_bound.as_ref().unwrap().borrow_mut().wind_delta = -loc_min.left_bound.as_ref().unwrap().borrow().wind_delta;
+            loc_min
+                .right_bound
+                .as_ref()
+                .unwrap()
+                .borrow_mut()
+                .wind_delta = -loc_min.left_bound.as_ref().unwrap().borrow().wind_delta;
 
-            e = self.process_bound(loc_min.left_bound.as_ref().unwrap().clone(), left_bound_is_forward);
+            e = self.process_bound(
+                loc_min.left_bound.as_ref().unwrap().clone(),
+                left_bound_is_forward,
+            );
             if e.borrow().out_idx == SKIP {
                 e = self.process_bound(e.clone(), left_bound_is_forward);
             }
 
-            let mut e2 = self.process_bound(loc_min.right_bound.as_ref().unwrap().clone(), !left_bound_is_forward);
+            let mut e2 = self.process_bound(
+                loc_min.right_bound.as_ref().unwrap().clone(),
+                !left_bound_is_forward,
+            );
             if e2.borrow().out_idx == SKIP {
                 e2 = self.process_bound(e2.clone(), !left_bound_is_forward);
             }

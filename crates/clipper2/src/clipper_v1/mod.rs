@@ -3940,7 +3940,7 @@ impl ClipperOffset {
                 for child in &mut solution.root.childs {
                     child.parent = Some(Box::new(solution.root.clone()));
                 }
-            } else {
+        } else {
                 solution.clear();
             }
         }
@@ -4131,6 +4131,193 @@ impl ClipperOffset {
                         node.polygon.reverse();
                     }
                 }
+            }
+        }
+    }
+
+    fn do_offset(&mut self, delta: f64) {
+        self.dest_polys = Some(Vec::new());
+        self.delta = delta;
+
+        if ClipperBase::near_zero(delta) {
+            self.dest_polys.as_mut().unwrap().reserve(self.poly_nodes.child_count());
+            for node in &self.poly_nodes.childs {
+                if node.endtype == EndType::ClosedPolygon {
+                    self.dest_polys.as_mut().unwrap().push(node.polygon.clone());
+                }
+            }
+            return;
+        }
+
+        self.miter_lim = if self.miter_limit > 2.0 {
+            2.0 / (self.miter_limit * self.miter_limit)
+        } else {
+            0.5
+        };
+
+        let y = if self.arc_tolerance <= 0.0 {
+            DEF_ARC_TOLERANCE
+        } else if self.arc_tolerance > delta.abs() * DEF_ARC_TOLERANCE {
+            delta.abs() * DEF_ARC_TOLERANCE
+        } else {
+            self.arc_tolerance
+        };
+
+        let steps = PI / (1.0 - y / delta.abs()).acos();
+        self.sin = (TWO_PI / steps).sin();
+        self.cos = (TWO_PI / steps).cos();
+        self.steps_per_rad = steps / TWO_PI;
+        if delta < 0.0 {
+            self.sin = -self.sin;
+        }
+
+        self.dest_polys.as_mut().unwrap().reserve(self.poly_nodes.child_count() * 2);
+        for node in &self.poly_nodes.childs {
+            self.src_poly = Some(node.polygon.clone());
+            let len = self.src_poly.as_ref().unwrap().len();
+
+            if len == 0 || (delta <= 0.0 && (len < 3 || node.endtype != EndType::ClosedPolygon)) {
+                continue;
+            }
+
+            self.dest_poly = Some(Vec::new());
+
+            if len == 1 {
+                if node.jointype == JoinType::Round {
+                    let mut x = 1.0;
+                    let mut y = 0.0;
+                    for _ in 1..=steps as i32 {
+                        self.dest_poly.as_mut().unwrap().push(IntPoint::new(
+                            ClipperOffset::round(self.src_poly.as_ref().unwrap()[0].x as f64 + x * delta),
+                            ClipperOffset::round(self.src_poly.as_ref().unwrap()[0].y as f64 + y * delta),
+                        ));
+                        let x2 = x;
+                        x = x * self.cos - self.sin * y;
+                        y = x2 * self.sin + y * self.cos;
+                    }
+                } else {
+                    let mut x = -1.0;
+                    let mut y = -1.0;
+                    for _ in 0..4 {
+                        self.dest_poly.as_mut().unwrap().push(IntPoint::new(
+                            ClipperOffset::round(self.src_poly.as_ref().unwrap()[0].x as f64 + x * delta),
+                            ClipperOffset::round(self.src_poly.as_ref().unwrap()[0].y as f64 + y * delta),
+                        ));
+                        if x < 0.0 {
+                            x = 1.0;
+                        } else if y < 0.0 {
+                            y = 1.0;
+                        } else {
+                            x = -1.0;
+                        }
+                    }
+                }
+                self.dest_polys.as_mut().unwrap().push(self.dest_poly.take().unwrap());
+                continue;
+            }
+
+            self.normals.clear();
+            self.normals.reserve(len);
+            for j in 0..len - 1 {
+                self.normals.push(Clipper::get_unit_normal(
+                    self.src_poly.as_ref().unwrap()[j],
+                    self.src_poly.as_ref().unwrap()[j + 1],
+                ));
+            }
+            if node.endtype == EndType::ClosedLine || node.endtype == EndType::ClosedPolygon {
+                self.normals.push(Clipper::get_unit_normal(
+                    self.src_poly.as_ref().unwrap()[len - 1],
+                    self.src_poly.as_ref().unwrap()[0],
+                ));
+            } else {
+                self.normals.push(self.normals[len - 2]);
+            }
+
+            if node.endtype == EndType::ClosedPolygon {
+                let mut k = len - 1;
+                for j in 0..len {
+                    self.offset_point(j, &mut k, node.jointype);
+                }
+                self.dest_polys.as_mut().unwrap().push(self.dest_poly.take().unwrap());
+            } else if node.endtype == EndType::ClosedLine {
+                let mut k = len - 1;
+                for j in 0..len {
+                    self.offset_point(j, &mut k, node.jointype);
+                }
+                self.dest_polys.as_mut().unwrap().push(self.dest_poly.take().unwrap());
+                self.dest_poly = Some(Vec::new());
+                let n = self.normals[len - 1];
+                for j in (1..len).rev() {
+                    self.normals[j] = DoublePoint::new(-self.normals[j - 1].x, -self.normals[j - 1].y);
+                }
+                self.normals[0] = DoublePoint::new(-n.x, -n.y);
+                k = 0;
+                for j in (0..len).rev() {
+                    self.offset_point(j, &mut k, node.jointype);
+                }
+                self.dest_polys.as_mut().unwrap().push(self.dest_poly.take().unwrap());
+            } else {
+                let mut k = 0;
+                for j in 1..len - 1 {
+                    self.offset_point(j, &mut k, node.jointype);
+                }
+
+                let pt1;
+                if node.endtype == EndType::OpenButt {
+                    let j = len - 1;
+                    pt1 = IntPoint::new(
+                        ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].x as f64 + self.normals[j].x * delta),
+                        ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].y as f64 + self.normals[j].y * delta),
+                    );
+                    self.dest_poly.as_mut().unwrap().push(pt1);
+                    pt1 = IntPoint::new(
+                        ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].x as f64 - self.normals[j].x * delta),
+                        ClipperOffset::round(self.src_poly.as_ref().unwrap()[j].y as f64 - self.normals[j].y * delta),
+                    );
+                    self.dest_poly.as_mut().unwrap().push(pt1);
+                } else {
+                    let j = len - 1;
+                    k = len - 2;
+                    self.sin_a = 0.0;
+                    self.normals[j] = DoublePoint::new(-self.normals[j].x, -self.normals[j].y);
+                    if node.endtype == EndType::OpenSquare {
+                        self.do_square(j, k);
+                    } else {
+                        self.do_round(j, k);
+                    }
+                }
+
+                for j in (1..len).rev() {
+                    self.normals[j] = DoublePoint::new(-self.normals[j - 1].x, -self.normals[j - 1].y);
+                }
+                self.normals[0] = DoublePoint::new(-self.normals[1].x, -self.normals[1].y);
+
+                k = len - 1;
+                for j in (1..len - 1).rev() {
+                    self.offset_point(j, &mut k, node.jointype);
+                }
+
+                if node.endtype == EndType::OpenButt {
+                    pt1 = IntPoint::new(
+                        ClipperOffset::round(self.src_poly.as_ref().unwrap()[0].x as f64 - self.normals[0].x * delta),
+                        ClipperOffset::round(self.src_poly.as_ref().unwrap()[0].y as f64 - self.normals[0].y * delta),
+                    );
+                    self.dest_poly.as_mut().unwrap().push(pt1);
+                    pt1 = IntPoint::new(
+                        ClipperOffset::round(self.src_poly.as_ref().unwrap()[0].x as f64 + self.normals[0].x * delta),
+                        ClipperOffset::round(self.src_poly.as_ref().unwrap()[0].y as f64 + self.normals[0].y * delta),
+                    );
+                    self.dest_poly.as_mut().unwrap().push(pt1);
+                } else {
+                    k = 1;
+                    self.sin_a = 0.0;
+                    if node.endtype == EndType::OpenSquare {
+                        self.do_square(0, 1);
+                    } else {
+                        self.do_round(0, 1);
+                    }
+                }
+                self.dest_polys.as_mut().unwrap().push(self.dest_poly.take().unwrap());
             }
         }
     }

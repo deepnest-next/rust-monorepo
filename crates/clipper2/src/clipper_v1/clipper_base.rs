@@ -332,7 +332,7 @@ impl ClipperBase {
         self.current_lm = None;
     }
 
-    /// Resets the clipper state for a new operation
+    /// Resets the clipper state for a new operation 
     pub fn reset(&mut self) {
         self.current_lm = self.minima_list.clone();
         if self.current_lm.is_none() {
@@ -641,6 +641,14 @@ impl ClipperBase {
             self.current_lm = Some(lm);
         }
         None
+    }
+
+    /// Reverses a horizontal edge by swapping its top and bottom X coordinates
+    fn reverse_horizontal(&self, edge: &mut TEdge) {
+        // Swap horizontal edges' top and bottom x's so they follow the natural
+        // progression of the bounds - ie so their xbots will align with the
+        // adjoining lower edge
+        CBS::swap(&mut edge.top.x, &mut edge.bot.x);
     }
 }
 

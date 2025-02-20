@@ -610,6 +610,23 @@ impl ClipperBase {
         result.prev = None; // flag as removed
         result
     }
+
+    /// Inserts a local minima into the sorted minima list
+    fn insert_local_minima(&mut self, new_lm: &mut LocalMinima) {
+        if self.minima_list.is_none() {
+            self.minima_list = Some(Box::new(new_lm.clone()));
+        } else if new_lm.y >= self.minima_list.as_ref().unwrap().y {
+            new_lm.next = self.minima_list.take();
+            self.minima_list = Some(Box::new(new_lm.clone()));
+        } else {
+            let mut curr_lm = self.minima_list.as_mut().unwrap();
+            while curr_lm.next.is_some() && new_lm.y < curr_lm.next.as_ref().unwrap().y {
+                curr_lm = curr_lm.next.as_mut().unwrap();
+            }
+            new_lm.next = curr_lm.next.take();
+            curr_lm.next = Some(Box::new(new_lm.clone()));
+        }
+    }
 }
 
 impl Default for ClipperBase {

@@ -50,7 +50,7 @@ impl ClipperBaseStatic {
     }
 
     /// Checks if pt2 is between pt1 and pt3
-    pub fn pt2_between_pt1_and_pt3(pt1: &IntPoint, pt2: &IntPoint, pt3: &IntPoint) -> bool {
+    pub fn pt2_is_between_pt1_and_pt3(pt1: &IntPoint, pt2: &IntPoint, pt3: &IntPoint) -> bool {
         if *pt1 == *pt3 || *pt1 == *pt2 || *pt3 == *pt2 {
             return false;
         }
@@ -167,10 +167,10 @@ mod tests {
     }
 
     #[test]
-    fn test_pt2_between_pt1_and_pt3() {
+    fn test_pt2_is_between_pt1_and_pt3() {
         let pt1 = IntPoint::new(0, 0);
         let pt2 = IntPoint::new(5, 5);
         let pt3 = IntPoint::new(10, 10);
-        assert!(ClipperBaseStatic::pt2_between_pt1_and_pt3(&pt1, &pt2, &pt3));
+        assert!(ClipperBaseStatic::pt2_is_between_pt1_and_pt3(&pt1, &pt2, &pt3));
     }
 }

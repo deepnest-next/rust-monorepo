@@ -155,7 +155,7 @@ impl ClipperBase {
                     self.use_full_range
                 ) &&
                 (!self.preserve_collinear || 
-                 !CBS::pt2_between_pt1_and_pt3(
+                 !CBS::pt2_is_between_pt1_and_pt3(
                      &e.prev.as_ref().unwrap().borrow().curr,
                      &e.curr,
                      &e.next.as_ref().unwrap().borrow().curr

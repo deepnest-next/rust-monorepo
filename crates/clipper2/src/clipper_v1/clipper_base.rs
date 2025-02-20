@@ -292,6 +292,17 @@ impl ClipperBase {
         Ok(true)
     }
 
+    /// Adds multiple paths to the clipper
+    pub fn add_paths(&mut self, ppg: &Paths, poly_type: PolyType, closed: bool) -> Result<bool> {
+        let mut result = false;
+        for path in ppg {
+            if self.add_path(path, poly_type, closed)? {
+                result = true;
+            }
+        }
+        Ok(result)
+    }
+
     /// Clears internal state and disposes of allocated resources
     pub fn clear(&mut self) {
         // Dispose of the local minima list
@@ -407,6 +418,179 @@ impl ClipperBase {
             }
         }
         false
+    }
+
+    /// Finds the next local minimum edge in a sequence
+    fn find_next_local_minimum(&self, edge: &TEdge) -> TEdge {
+        let mut e = edge.clone();
+        loop {
+            // Skip edges where bottom equals previous bottom or current equals top
+            while e.bot == e.prev.as_ref().unwrap().borrow().bot || e.curr == e.top {
+                e = e.next.as_ref().unwrap().borrow().clone();
+            }
+
+            // Skip horizontal edges
+            if e.dx != HORIZONTAL && e.prev.as_ref().unwrap().borrow().dx != HORIZONTAL {
+                // Skip edges where previous is horizontal
+                while e.prev.as_ref().unwrap().borrow().dx == HORIZONTAL {
+                    e = e.prev.as_ref().unwrap().borrow().clone();
+                }
+                // Skip edges where current is horizontal
+                while e.dx == HORIZONTAL {
+                    e = e.next.as_ref().unwrap().borrow().clone();
+                }
+            }
+
+            // Check if we've found a local minimum
+            if e.top.y == e.prev.as_ref().unwrap().borrow().bot.y {
+                // If previous bottom X is less than current bottom X
+                if e.prev.as_ref().unwrap().borrow().bot.x < e.bot.x {
+                    break;
+                }
+            }
+            e = e.next.as_ref().unwrap().borrow().clone();
+        }
+        e
+    }
+
+    /// Processes a bound edge and returns the processed edge
+    fn process_bound(&mut self, edge: &TEdge, left_bound_is_forward: bool) -> TEdge {
+        let mut result = edge.clone();
+        let mut e = edge.clone();
+
+        // Handle edges marked for skipping
+        if result.out_idx == SKIP {
+            // Check for additional edges beyond the skip edge
+            if left_bound_is_forward {
+                while e.top.y == e.next.as_ref().unwrap().borrow().bot.y {
+                    e = e.next.as_ref().unwrap().borrow().clone();
+                }
+                while e != result && e.dx == HORIZONTAL {
+                    e = e.prev.as_ref().unwrap().borrow().clone();
+                }
+            } else {
+                while e.top.y == e.prev.as_ref().unwrap().borrow().bot.y {
+                    e = e.prev.as_ref().unwrap().borrow().clone();
+                }
+                while e != result && e.dx == HORIZONTAL {
+                    e = e.next.as_ref().unwrap().borrow().clone();
+                }
+            }
+            if e == result {
+                result = if left_bound_is_forward {
+                    e.next.as_ref().unwrap().borrow().clone()
+                } else {
+                    e.prev.as_ref().unwrap().borrow().clone()
+                };
+            } else {
+                // Create new local minima for remaining edges
+                e = if left_bound_is_forward {
+                    result.next.as_ref().unwrap().borrow().clone()
+                } else {
+                    result.prev.as_ref().unwrap().borrow().clone()
+                };
+                
+                let mut local_min = LocalMinima {
+                    y: e.bot.y,
+                    left_bound: None,
+                    right_bound: Some(Rc::new(RefCell::new(e.clone()))),
+                    next: None,
+                };
+                
+                e.wind_delta = 0;
+                result = self.process_bound(&e, left_bound_is_forward);
+                self.insert_local_minima(&mut local_min);
+            }
+            return result;
+        }
+
+        // Handle horizontal edges
+        if e.dx == HORIZONTAL {
+            // Handle consecutive horizontal edges carefully
+            if left_bound_is_forward {
+                let e_start = e.prev.as_ref().unwrap().borrow().clone();
+                if e_start.dx == HORIZONTAL {
+                    // Check if bot.x values match
+                    if e_start.bot.x != e.bot.x && e_start.top.x != e.bot.x {
+                        self.reverse_horizontal(&mut e);
+                    }
+                } else if e_start.bot.x != e.bot.x {
+                    self.reverse_horizontal(&mut e);
+                }
+            } else {
+                let e_start = e.next.as_ref().unwrap().borrow().clone();
+                if e_start.dx == HORIZONTAL {
+                    if e_start.bot.x != e.bot.x && e_start.top.x != e.bot.x {
+                        self.reverse_horizontal(&mut e);
+                    }
+                } else if e_start.bot.x != e.bot.x {
+                    self.reverse_horizontal(&mut e);
+                }
+            }
+        }
+
+        let e_start = e.clone();
+        if left_bound_is_forward {
+            while result.top.y == result.next.as_ref().unwrap().borrow().bot.y
+                && result.next.as_ref().unwrap().borrow().out_idx != SKIP {
+                result = result.next.as_ref().unwrap().borrow().clone();
+            }
+            
+            if result.dx == HORIZONTAL && result.next.as_ref().unwrap().borrow().out_idx != SKIP {
+                let mut horz = result.clone();
+                while horz.prev.as_ref().unwrap().borrow().dx == HORIZONTAL {
+                    horz = horz.prev.as_ref().unwrap().borrow().clone();
+                }
+                if horz.prev.as_ref().unwrap().borrow().top.x > result.next.as_ref().unwrap().borrow().top.x {
+                    result = horz.prev.as_ref().unwrap().borrow().clone();
+                }
+            }
+            
+            while e != result {
+                e.next_in_lml = Some(Rc::new(RefCell::new(e.next.as_ref().unwrap().borrow().clone())));
+                if e.dx == HORIZONTAL && e != e_start && e.bot.x != e.prev.as_ref().unwrap().borrow().top.x {
+                    self.reverse_horizontal(&mut e);
+                }
+                e = e.next.as_ref().unwrap().borrow().clone();
+            }
+            
+            if e.dx == HORIZONTAL && e != e_start && e.bot.x != e.prev.as_ref().unwrap().borrow().top.x {
+                self.reverse_horizontal(&mut e);
+            }
+            result = result.next.as_ref().unwrap().borrow().clone();
+            
+        } else {
+            while result.top.y == result.prev.as_ref().unwrap().borrow().bot.y
+                && result.prev.as_ref().unwrap().borrow().out_idx != SKIP {
+                result = result.prev.as_ref().unwrap().borrow().clone();
+            }
+            
+            if result.dx == HORIZONTAL && result.prev.as_ref().unwrap().borrow().out_idx != SKIP {
+                let mut horz = result.clone();
+                while horz.next.as_ref().unwrap().borrow().dx == HORIZONTAL {
+                    horz = horz.next.as_ref().unwrap().borrow().clone();
+                }
+                if horz.next.as_ref().unwrap().borrow().top.x == result.prev.as_ref().unwrap().borrow().top.x ||
+                   horz.next.as_ref().unwrap().borrow().top.x > result.prev.as_ref().unwrap().borrow().top.x {
+                    result = horz.next.as_ref().unwrap().borrow().clone();
+                }
+            }
+
+            while e != result {
+                e.next_in_lml = Some(Rc::new(RefCell::new(e.prev.as_ref().unwrap().borrow().clone())));
+                if e.dx == HORIZONTAL && e != e_start && e.bot.x != e.next.as_ref().unwrap().borrow().top.x {
+                    self.reverse_horizontal(&mut e);
+                }
+                e = e.prev.as_ref().unwrap().borrow().clone();
+            }
+            
+            if e.dx == HORIZONTAL && e != e_start && e.bot.x != e.next.as_ref().unwrap().borrow().top.x {
+                self.reverse_horizontal(&mut e);
+            }
+            result = result.prev.as_ref().unwrap().borrow().clone();
+        }
+        
+        result
     }
 }
 

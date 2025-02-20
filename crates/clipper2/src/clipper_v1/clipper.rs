@@ -29,7 +29,8 @@ pub struct Clipper {
 
 impl Clipper {
     /// Creates a new Clipper instance with optional initialization flags
-    pub fn new(init_options: i32) -> Self {
+    pub fn new(init_options: Option<i32>) -> Self {
+        let init_options = init_options.unwrap_or(0);
         // Initialize options based on flags
         let reverse_solution = (init_options & IO_REVERSE_SOLUTION) != 0;
         let strictly_simple = (init_options & IO_STRICTLY_SIMPLE) != 0;

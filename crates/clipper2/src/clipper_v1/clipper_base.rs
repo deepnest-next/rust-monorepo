@@ -592,6 +592,24 @@ impl ClipperBase {
         
         result
     }
+
+    /// Removes an edge from a double-linked list and returns the next edge
+    fn remove_edge(&self, e: &TEdge) -> TEdge {
+        // Get references to prev and next edges
+        let prev = e.prev.as_ref().unwrap();
+        let next = e.next.as_ref().unwrap();
+
+        // Update next's prev pointer
+        next.borrow_mut().prev = Some(prev.clone());
+        
+        // Update prev's next pointer
+        prev.borrow_mut().next = Some(next.clone());
+
+        // Return the next edge while marking e as removed by clearing its prev pointer
+        let mut result = next.borrow().clone();
+        result.prev = None; // flag as removed
+        result
+    }
 }
 
 impl Default for ClipperBase {

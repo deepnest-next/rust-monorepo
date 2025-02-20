@@ -1,8 +1,8 @@
-use std::cmp::Ordering;
-use std::cell::RefCell;
-use std::rc::Rc;
 use super::poly::*;
 use super::tedge::*;
+use std::cell::RefCell;
+use std::cmp::Ordering;
+use std::rc::Rc;
 
 /// Alias for 64-bit integers.
 pub type CInt = i64;
@@ -263,7 +263,7 @@ pub struct Maxima {
 // OutPt (Output Point)
 ///////////////////////////////////////////////////////////////////////////////
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct OutPt {
     pub idx: i32,
     pub pt: IntPoint,
@@ -286,7 +286,6 @@ pub struct OutRec {
     pub poly_node: Option<PolyNode>,
 }
 
-
 impl Default for OutRec {
     fn default() -> Self {
         Self {
@@ -302,7 +301,7 @@ impl Default for OutRec {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Join 
+// Join
 ///////////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug, Clone)]

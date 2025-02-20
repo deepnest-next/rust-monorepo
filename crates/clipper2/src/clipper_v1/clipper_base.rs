@@ -46,16 +46,17 @@ impl ClipperBase {
     }
 
     /// Tests if a point fits within coordinate range
-    pub fn range_test(&self, pt: IntPoint, use_full_range: &mut bool) -> Result<()> {
-        if *use_full_range {
+    pub fn range_test(pt: IntPoint, use_full_range: bool) -> Result<((), bool)> {
+        let mut use_full = use_full_range;
+        if use_full {
             if pt.x > HI_RANGE || pt.y > HI_RANGE || -pt.x > HI_RANGE || -pt.y > HI_RANGE {
                 return Err(ClipperError::CoordinateOutOfRange);
             }
         } else if pt.x > LO_RANGE || pt.y > LO_RANGE || -pt.x > LO_RANGE || -pt.y > LO_RANGE {
-            *use_full_range = true;
-            self.range_test(pt, use_full_range)?;
+            use_full = true;
+            Self::range_test(pt, use_full)?;
         }
-        Ok(())
+        Ok(((), use_full))
     }
 
     /// Initializes edge fields
@@ -120,15 +121,29 @@ impl ClipperBase {
         let mut is_flat = true;
 
         // 1. Basic (first) edge initialization
-        edges[1].curr = path[1];
-        self.range_test(path[0], &mut self.use_full_range)?;
-        self.range_test(path[high_i as usize], &mut self.use_full_range)?;
-        self.init_edge(&mut edges[0], &edges[1], &edges[high_i as usize], path[0]);
-        self.init_edge(&mut edges[high_i as usize], &edges[0], &edges[(high_i - 1) as usize], path[high_i as usize]);
+        let use_full_range = self.use_full_range;
+        let (_, use_full_range) = Self::range_test(path[0], use_full_range)?;
+        let (_, use_full_range) = Self::range_test(path[high_i as usize], use_full_range)?;
+        self.use_full_range = use_full_range;
+        // Initialize first and last edges
+        let last_idx = edges.len() - 1;
+        {
+            let (first, rest) = edges.split_at_mut(1);
+            self.init_edge(&mut first[0], &rest[0], &rest[last_idx-1], path[0]);
+        }
+        {
+            let (left, right) = edges.split_at_mut(high_i as usize);
+            self.init_edge(&mut right[0], &left[0], &left[left.len()-1], path[high_i as usize]);
+        }
         
         for i in (1..high_i).rev() {
-            self.range_test(path[i as usize], &mut self.use_full_range)?;
-            self.init_edge(&mut edges[i as usize], &edges[(i + 1) as usize], &edges[(i - 1) as usize], path[i as usize]);
+            let (_, use_full_range) = Self::range_test(path[i as usize], self.use_full_range)?;
+            self.use_full_range = use_full_range;
+            let (_, use_full_range) = Self::range_test(path[i as usize], self.use_full_range)?;
+            self.use_full_range = use_full_range;
+            let (left, right) = edges.split_at_mut(i as usize);
+            let (curr, right) = right.split_at_mut(1);
+            self.init_edge(&mut curr[0], &right[0], &left[left.len()-1], path[i as usize]);
         }
 
         let mut e_start = edges[0].clone();
@@ -169,7 +184,8 @@ impl ClipperBase {
                 e_loop_stop = e.clone();
                 continue;
             }
-            e = e.next.as_ref().unwrap().borrow().clone();
+            let next_edge = e.next.as_ref().unwrap().borrow().clone();
+            e = next_edge;
             if e.eq(&e_loop_stop) || (!closed && e.next.as_ref().unwrap().borrow().eq(&e_start)) {
                 break;
             }
@@ -188,14 +204,21 @@ impl ClipperBase {
         // 3. Do second stage of edge initialization
         let mut e = e_start.clone();
         loop {
-            self.init_edge2(&mut e, poly_type);
-            e = e.next.as_ref().unwrap().borrow().clone();
-            if is_flat && e.curr.y != e_start.curr.y {
+            {
+                // Create temporary mutable reference within a new scope
+                let mut temp_e = e.clone();
+                self.init_edge2(&mut temp_e, poly_type);
+                e = temp_e;
+            }
+            
+            let next_edge = e.next.as_ref().unwrap().borrow().clone();
+            if is_flat && next_edge.curr.y != e_start.curr.y {
                 is_flat = false;
             }
-            if e.eq(&e_start) {
+            if next_edge.eq(&e_start) {
                 break;
             }
+            e = next_edge;
         }
 
         // 4. Finally, add local minima to LocalMinima list
@@ -222,7 +245,8 @@ impl ClipperBase {
                 if e.next.as_ref().unwrap().borrow().out_idx == SKIP {
                     break;
                 }
-                e = e.next.as_ref().unwrap().borrow().clone();
+                let next_edge = e.next.as_ref().unwrap().borrow().clone();
+                e = next_edge;
             }
             self.insert_local_minima(&mut local_min);
             self.edges.push(edges);
@@ -236,7 +260,10 @@ impl ClipperBase {
 
         // Handle open paths with matching endpoints
         if e.prev.as_ref().unwrap().borrow().bot == e.prev.as_ref().unwrap().borrow().top {
-            e = e.next.as_ref().unwrap().borrow().clone();
+            {
+                let next = e.next.as_ref().unwrap().borrow().clone();
+                e = next;
+            }
         }
 
         loop {
@@ -286,7 +313,8 @@ impl ClipperBase {
             self.insert_local_minima(&mut local_min);
 
             if !left_bound_is_forward {
-                e = e.prev.as_ref().unwrap().borrow().clone();
+                let prev_edge = e.prev.as_ref().unwrap().borrow().clone();
+                e = prev_edge;
             }
         }
 
@@ -342,7 +370,7 @@ impl ClipperBase {
 
         self.scanbeam = None;
         let mut lm = self.minima_list.clone();
-        while let Some(local_minima) = lm {
+        while let Some(mut local_minima) = lm {
             self.insert_scanbeam(local_minima.y);
             // Reset edge properties
             if let Some(ref mut e) = local_minima.left_bound {
@@ -417,15 +445,16 @@ impl ClipperBase {
     /// Checks if a point is a vertex in the output polygon
     /// internal
     fn point_is_vertex(&self, pt: &IntPoint, pp: &OutPt) -> bool {
-        let mut pp2 = pp;
+        let mut pp2 = pp.clone();
         loop {
             if pp2.pt == *pt {
                 return true;
             }
-            pp2 = &pp2.next.as_ref().unwrap().borrow();
-            if pp2 == pp {
+            let next = pp2.next.as_ref().unwrap().borrow().clone();
+            if std::ptr::eq(&next.clone(), pp) {
                 break;
             }
+            pp2 = next;
         }
         false
     }
@@ -464,13 +493,13 @@ impl ClipperBase {
 
     /// Checks if a point lies on any edge of a polygon
     fn point_on_polygon(&self, pt: &IntPoint, pp: &OutPt, use_full_range: bool) -> bool {
-        let mut pp2 = pp;
+        let pp2 = pp.clone();
         loop {
             if self.point_on_line_segment(pt, &pp2.pt, &pp2.next.as_ref().unwrap().borrow().pt, use_full_range) {
                 return true;
             }
-            pp2 = &pp2.next.as_ref().unwrap().borrow();
-            if pp2 == pp {
+            let next_pp2 = pp2.next.as_ref().unwrap().borrow();
+            if std::ptr::eq(&next_pp2.clone(), pp) {
                 break;
             }
         }
@@ -483,18 +512,21 @@ impl ClipperBase {
         loop {
             // Skip edges where bottom equals previous bottom or current equals top
             while e.bot == e.prev.as_ref().unwrap().borrow().bot || e.curr == e.top {
-                e = e.next.as_ref().unwrap().borrow().clone();
+                let next_edge = e.next.as_ref().unwrap().borrow().clone();
+                e = next_edge;
             }
 
             // Skip horizontal edges
             if e.dx != HORIZONTAL && e.prev.as_ref().unwrap().borrow().dx != HORIZONTAL {
                 // Skip edges where previous is horizontal
                 while e.prev.as_ref().unwrap().borrow().dx == HORIZONTAL {
-                    e = e.prev.as_ref().unwrap().borrow().clone();
+                    let prev_edge = e.prev.as_ref().unwrap().borrow().clone();
+                    e = prev_edge;
                 }
                 // Skip edges where current is horizontal
                 while e.dx == HORIZONTAL {
-                    e = e.next.as_ref().unwrap().borrow().clone();
+                    let next_edge = e.next.as_ref().unwrap().borrow().clone();
+                    e = next_edge;
                 }
             }
 
@@ -505,7 +537,10 @@ impl ClipperBase {
                     break;
                 }
             }
-            e = e.next.as_ref().unwrap().borrow().clone();
+            {
+                let next_edge = e.next.as_ref().unwrap().borrow().clone();
+                e = next_edge;
+            }
         }
         e
     }
@@ -520,17 +555,25 @@ impl ClipperBase {
             // Check for additional edges beyond the skip edge
             if left_bound_is_forward {
                 while e.top.y == e.next.as_ref().unwrap().borrow().bot.y {
-                    e = e.next.as_ref().unwrap().borrow().clone();
+                    let next_edge = e.next.as_ref().unwrap().borrow().clone();
+                    e = next_edge;
                 }
-                while e != result && e.dx == HORIZONTAL {
-                    e = e.prev.as_ref().unwrap().borrow().clone();
+                let mut e_clone = e.clone();
+                while e_clone != result && e_clone.dx == HORIZONTAL {
+                    let prev_edge = e_clone.prev.as_ref().unwrap().borrow().clone();
+                    e_clone = prev_edge;
                 }
+                e = e_clone;
             } else {
                 while e.top.y == e.prev.as_ref().unwrap().borrow().bot.y {
-                    e = e.prev.as_ref().unwrap().borrow().clone();
+                    let prev_edge = e.prev.as_ref().unwrap().borrow().clone();
+                    e = prev_edge;
                 }
                 while e != result && e.dx == HORIZONTAL {
-                    e = e.next.as_ref().unwrap().borrow().clone();
+                    {
+                        let next_edge = e.next.as_ref().unwrap().borrow().clone();
+                        e = next_edge;
+                    }
                 }
             }
             if e == result {
@@ -590,13 +633,15 @@ impl ClipperBase {
         if left_bound_is_forward {
             while result.top.y == result.next.as_ref().unwrap().borrow().bot.y
                 && result.next.as_ref().unwrap().borrow().out_idx != SKIP {
-                result = result.next.as_ref().unwrap().borrow().clone();
+                let next_result = result.next.as_ref().unwrap().borrow().clone();
+                result = next_result;
             }
             
             if result.dx == HORIZONTAL && result.next.as_ref().unwrap().borrow().out_idx != SKIP {
                 let mut horz = result.clone();
                 while horz.prev.as_ref().unwrap().borrow().dx == HORIZONTAL {
-                    horz = horz.prev.as_ref().unwrap().borrow().clone();
+                    let temp_horz = horz.prev.as_ref().unwrap().borrow().clone();
+                    horz = temp_horz;
                 }
                 if horz.prev.as_ref().unwrap().borrow().top.x > result.next.as_ref().unwrap().borrow().top.x {
                     result = horz.prev.as_ref().unwrap().borrow().clone();
@@ -608,24 +653,28 @@ impl ClipperBase {
                 if e.dx == HORIZONTAL && e != e_start && e.bot.x != e.prev.as_ref().unwrap().borrow().top.x {
                     self.reverse_horizontal(&mut e);
                 }
-                e = e.next.as_ref().unwrap().borrow().clone();
+                let next_edge = e.next.as_ref().unwrap().borrow().clone();
+                e = next_edge;
             }
             
             if e.dx == HORIZONTAL && e != e_start && e.bot.x != e.prev.as_ref().unwrap().borrow().top.x {
                 self.reverse_horizontal(&mut e);
             }
-            result = result.next.as_ref().unwrap().borrow().clone();
+            let next_result = result.next.as_ref().unwrap().borrow().clone();
+            result = next_result;
             
         } else {
             while result.top.y == result.prev.as_ref().unwrap().borrow().bot.y
                 && result.prev.as_ref().unwrap().borrow().out_idx != SKIP {
-                result = result.prev.as_ref().unwrap().borrow().clone();
+                let prev_edge = result.prev.as_ref().unwrap().borrow().clone();
+                result = prev_edge;
             }
             
             if result.dx == HORIZONTAL && result.prev.as_ref().unwrap().borrow().out_idx != SKIP {
                 let mut horz = result.clone();
                 while horz.next.as_ref().unwrap().borrow().dx == HORIZONTAL {
-                    horz = horz.next.as_ref().unwrap().borrow().clone();
+                    let next_horz = horz.next.as_ref().unwrap().borrow().clone();
+                    horz = next_horz;
                 }
                 if horz.next.as_ref().unwrap().borrow().top.x == result.prev.as_ref().unwrap().borrow().top.x ||
                    horz.next.as_ref().unwrap().borrow().top.x > result.prev.as_ref().unwrap().borrow().top.x {
@@ -638,13 +687,15 @@ impl ClipperBase {
                 if e.dx == HORIZONTAL && e != e_start && e.bot.x != e.next.as_ref().unwrap().borrow().top.x {
                     self.reverse_horizontal(&mut e);
                 }
-                e = e.prev.as_ref().unwrap().borrow().clone();
+                let prev_edge = e.prev.as_ref().unwrap().borrow().clone();
+                e = prev_edge;
             }
             
             if e.dx == HORIZONTAL && e != e_start && e.bot.x != e.next.as_ref().unwrap().borrow().top.x {
                 self.reverse_horizontal(&mut e);
             }
-            result = result.prev.as_ref().unwrap().borrow().clone();
+            let prev_edge = result.prev.as_ref().unwrap().borrow().clone();
+            result = prev_edge;
         }
         
         result
@@ -882,14 +933,14 @@ impl ClipperBase {
         }
 
         // Update prev's next pointer
-        if let Some(prev) = ael_prev {
+        if let Some(prev) = ael_prev.clone() {
             prev.borrow_mut().next_in_ael = ael_next.clone();
         } else {
             self.active_edges = ael_next.clone();
         }
 
         // Update next's prev pointer
-        if let Some(next) = ael_next {
+        if let Some(next) = ael_next.clone() {
             next.borrow_mut().prev_in_ael = ael_prev.clone();
         }
 

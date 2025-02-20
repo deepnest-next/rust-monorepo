@@ -42,9 +42,9 @@ impl ClipperOffset {
             cos: 0.0,
             miter_lim: 2.0,
             steps_per_rad: DEFAULT_ARC_TOLERANCE,
-            lowest: IntPoint::new(0, 0),
-            arc_tolerance: arc_tolerance.max(DEFAULT_ARC_TOLERANCE),
-            miter_limit: miter_limit.max(2.0),
+            lowest: IntPoint::new(-1, 0),
+            arc_tolerance: arc_tolerance,
+            miter_limit: miter_limit,
         }
     }
 
@@ -297,6 +297,15 @@ impl ClipperOffset {
                 }
             }
         }
+    }
+
+    /// Clears all paths and resets internal state
+    pub fn clear(&mut self) {
+        self.dest_polys.clear();
+        self.src_poly.clear();
+        self.dest_poly.clear();
+        self.normals.clear();
+        self.lowest = IntPoint::new(-1, -1);
     }
 }
 

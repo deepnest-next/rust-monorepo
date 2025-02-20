@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::ops::Deref as _;
 use std::rc::Rc;
 use super::types::*;
 use super::tedge::*;
@@ -747,14 +748,14 @@ impl ClipperBase {
         next.borrow_mut().out_idx = e.borrow().out_idx;
         
         // Update AEL pointers for previous edge
-        if let Some(prev) = ael_prev {
+        if let Some(prev) = ael_prev.clone() {
             prev.borrow_mut().next_in_ael = Some(next.clone());
         } else {
             self.active_edges = Some(next.clone());
         }
 
         // Update AEL pointers for next edge
-        if let Some(next_edge) = ael_next {
+        if let Some(next_edge) = ael_next.clone() {
             next_edge.borrow_mut().prev_in_ael = Some(next.clone());
         }
 
@@ -868,6 +869,33 @@ impl ClipperBase {
         else if edge2.borrow().prev_in_ael.is_none() {
             self.active_edges = Some(edge2.clone());
         }
+    }
+
+    /// Deletes an edge from the Active Edge List (AEL)
+    pub fn delete_from_ael(&mut self, e: &Rc<RefCell<TEdge>>) {
+        let ael_prev = e.borrow().prev_in_ael.clone();
+        let ael_next = e.borrow().next_in_ael.clone();
+        
+        // Check if edge is already deleted
+        if ael_prev.is_none() && ael_next.is_none() && !Rc::ptr_eq(e, self.active_edges.as_ref().unwrap()) {
+            return; // already deleted
+        }
+
+        // Update prev's next pointer
+        if let Some(prev) = ael_prev {
+            prev.borrow_mut().next_in_ael = ael_next.clone();
+        } else {
+            self.active_edges = ael_next.clone();
+        }
+
+        // Update next's prev pointer
+        if let Some(next) = ael_next {
+            next.borrow_mut().prev_in_ael = ael_prev.clone();
+        }
+
+        // Clear edge's pointers
+        e.borrow_mut().next_in_ael = None;
+        e.borrow_mut().prev_in_ael = None;
     }
 }
 

@@ -460,7 +460,7 @@ impl ClipperBase {
     }
 
     /// Checks if a point lies on a line segment
-    fn point_on_line_segment(
+    pub fn point_on_line_segment(
         &self, 
         pt: &IntPoint,
         line_pt1: &IntPoint,
@@ -471,10 +471,6 @@ impl ClipperBase {
             return true;
         }
         
-        // Check if point lies between endpoints using coordinate comparison
-        let x_between = (pt.x > line_pt1.x) == (pt.x < line_pt2.x);
-        let y_between = (pt.y > line_pt1.y) == (pt.y < line_pt2.y);
-
         if use_full_range {
             // High precision slope comparison using Int128
             // Equivalent to: (pt.X - linePt1.X) * (linePt2.Y - linePt1.Y) ==

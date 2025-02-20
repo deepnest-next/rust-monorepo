@@ -627,6 +627,21 @@ impl ClipperBase {
             curr_lm.next = Some(Box::new(new_lm.clone()));
         }
     }
+
+    /// Pops a local minima from the minima list at the specified Y coordinate
+    pub fn pop_local_minima(&mut self, y: CInt) -> Option<Box<LocalMinima>> {
+        // Check if there is a current local minima at the specified Y coordinate
+        if let Some(lm) = self.current_lm.take() {
+            if lm.y == y {
+                // Move to next local minima and return current one
+                self.current_lm = lm.next.clone();
+                return Some(lm);
+            }
+            // Put back the current local minima if Y doesn't match
+            self.current_lm = Some(lm);
+        }
+        None
+    }
 }
 
 impl Default for ClipperBase {

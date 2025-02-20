@@ -9,6 +9,12 @@ pub struct ClipperBaseStatic;
 
 impl ClipperBaseStatic {
 
+    /// Checks if a value is near zero
+    #[inline]
+    pub fn near_zero(val: f64) -> bool {
+        val > -TOLERANCE && val < TOLERANCE
+    }
+
     /// Swaps two CInt values
     #[inline]
     pub fn swap(val1: &mut CInt, val2: &mut CInt) {

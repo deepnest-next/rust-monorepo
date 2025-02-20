@@ -292,20 +292,33 @@ impl ClipperBase {
         Ok(true)
     }
 
-    /// Checks if a value is near zero
-    pub fn near_zero(val: f64) -> bool {
-        val > -TOLERANCE && val < TOLERANCE
-    }
-
-    /// Clears internal state
+    /// Clears internal state and disposes of allocated resources
     pub fn clear(&mut self) {
+        // Dispose of the local minima list
         self.dispose_local_minima_list();
+
+        // Clear edges vectors
         for edge_list in &mut self.edges {
+            // Mark edges as removed by nulling their prev pointers
+            for edge in edge_list.iter_mut() {
+                edge.prev = None;
+            }
             edge_list.clear();
         }
         self.edges.clear();
+
+        // Reset flags
         self.use_full_range = false;
         self.has_open_paths = false;
+    }
+
+    /// Disposes of the local minima list by nulling references
+    fn dispose_local_minima_list(&mut self) {
+        while let Some(mut lm) = self.minima_list.take() {
+            // Take next minima before dropping current one
+            self.minima_list = lm.next.take();
+        }
+        self.current_lm = None;
     }
 
     /// Resets the clipper state for a new operation

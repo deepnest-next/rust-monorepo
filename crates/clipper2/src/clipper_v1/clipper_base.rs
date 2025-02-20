@@ -127,7 +127,7 @@ impl ClipperBase {
         
         for i in (1..high_i).rev() {
             self.range_test(path[i as usize], &mut self.use_full_range)?;
-            self.init_edge(&mut edges[i as usize], &edges[i + 1], &edges[i - 1], path[i as usize]);
+            self.init_edge(&mut edges[i as usize], &edges[(i + 1) as usize], &edges[(i - 1) as usize], path[i as usize]);
         }
 
         let mut e_start = edges[0].clone();
@@ -380,6 +380,21 @@ impl ClipperBase {
             ((line_pt2.x - line_pt1.x) as i64) * ((pt.y - line_pt1.y) as i64)
         }
     }
+
+    /// Checks if a point lies on any edge of a polygon
+    fn point_on_polygon(&self, pt: &IntPoint, pp: &OutPt, use_full_range: bool) -> bool {
+        let mut pp2 = pp;
+        loop {
+            if self.point_on_line_segment(pt, &pp2.pt, &pp2.next.as_ref().unwrap().borrow().pt, use_full_range) {
+                return true;
+            }
+            pp2 = &pp2.next.as_ref().unwrap().borrow();
+            if pp2 == pp {
+                break;
+            }
+        }
+        false
+    }
 }
 
 impl Default for ClipperBase {
@@ -408,5 +423,54 @@ mod tests {
         // Test point not on line
         let pt_off = IntPoint::new(5, 6);
         assert!(!clipper.point_on_line_segment(&pt_off, &line_pt1, &line_pt2, false));
+    }
+
+    #[test]
+    fn test_point_on_polygon() {
+        let clipper = ClipperBase::new();
+        
+        // Create a simple square polygon using OutPt circular linked list
+        let pt1 = OutPt {
+            idx: 0,
+            pt: IntPoint::new(0, 0),
+            next: None,
+            prev: None,
+        };
+        let pt2 = OutPt {
+            idx: 1,
+            pt: IntPoint::new(10, 0),
+            next: None,
+            prev: None,
+        };
+        let pt3 = OutPt {
+            idx: 2,
+            pt: IntPoint::new(10, 10),
+            next: None,
+            prev: None,
+        };
+        let pt4 = OutPt {
+            idx: 3,
+            pt: IntPoint::new(0, 10),
+            next: None,
+            prev: None,
+        };
+
+        // Link the points in a circular list
+        let pt1_rc = Rc::new(RefCell::new(pt1));
+        let pt2_rc = Rc::new(RefCell::new(pt2));
+        let pt3_rc = Rc::new(RefCell::new(pt3));
+        let pt4_rc = Rc::new(RefCell::new(pt4));
+
+        pt1_rc.borrow_mut().next = Some(pt2_rc.clone());
+        pt2_rc.borrow_mut().next = Some(pt3_rc.clone());
+        pt3_rc.borrow_mut().next = Some(pt4_rc.clone());
+        pt4_rc.borrow_mut().next = Some(pt1_rc.clone());
+
+        // Test points
+        let point_on_edge = IntPoint::new(5, 0);  // point on bottom edge
+        let point_off_edge = IntPoint::new(5, 5); // point inside polygon
+
+        assert!(clipper.point_on_polygon(&point_on_edge, &pt1_rc.borrow(), false));
+        assert!(!clipper.point_on_polygon(&point_off_edge, &pt1_rc.borrow(), false));
     }
 }

@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::clipper_v1::types::*;
 
 /// A port of the C# TEdge class using Rc<RefCell<TEdge>> for pointer fields.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TEdge {
     /// The bottom point of the edge
     pub bot: IntPoint,

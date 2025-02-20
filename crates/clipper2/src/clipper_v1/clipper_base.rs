@@ -357,6 +357,62 @@ impl ClipperBase {
         self.active_edges = None;
     }
 
+    /// Inserts a value into the scanbeam sorted by Y coordinate (descending)
+    fn insert_scanbeam(&mut self, y: CInt) {
+        // Create new scanbeam
+        let new_sb = Box::new(Scanbeam {
+            y,
+            next: None,
+        });
+
+        // If no scanbeam exists, create first one
+        if self.scanbeam.is_none() {
+            self.scanbeam = Some(new_sb);
+            return;
+        }
+
+        // If Y is greater than scanbeam.Y, insert at start
+        if y > self.scanbeam.as_ref().unwrap().y {
+            let mut new_sb = new_sb;
+            new_sb.next = self.scanbeam.take();
+            self.scanbeam = Some(new_sb);
+            return;
+        }
+
+        // Find insertion point
+        let mut sb = self.scanbeam.as_mut().unwrap();
+        while sb.next.is_some() && y <= sb.next.as_ref().unwrap().y {
+            sb = sb.next.as_mut().unwrap();
+        }
+
+        // Ignore if Y equals current scanbeam Y 
+        if y == sb.y {
+            return;
+        }
+
+        // Insert new scanbeam
+        let mut new_sb = new_sb;
+        new_sb.next = sb.next.take();
+        sb.next = Some(new_sb);
+    }
+
+    /// Pops the topmost scanbeam from the list and returns its Y coordinate
+    pub fn pop_scanbeam(&mut self) -> Result<Option<CInt>> {
+        // Check if scanbeam list is empty
+        if self.scanbeam.is_none() {
+            return Ok(None);
+        }
+
+        // Get Y value from current scanbeam
+        let y = self.scanbeam.as_ref().unwrap().y;
+        
+        // Move to next scanbeam
+        self.scanbeam = self.scanbeam.take().unwrap().next;
+        
+        // Return the Y value
+        Ok(Some(y))
+    }
+
     /// Checks if a point is a vertex in the output polygon
     /// internal
     fn point_is_vertex(&self, pt: &IntPoint, pp: &OutPt) -> bool {
@@ -649,6 +705,11 @@ impl ClipperBase {
         // progression of the bounds - ie so their xbots will align with the
         // adjoining lower edge
         CBS::swap(&mut edge.top.x, &mut edge.bot.x);
+    }
+
+    /// Returns true if there are more local minima to process
+    pub fn local_minima_pending(&self) -> bool {
+        self.current_lm.is_some()
     }
 }
 

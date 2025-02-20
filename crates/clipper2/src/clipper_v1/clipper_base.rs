@@ -732,6 +732,143 @@ impl ClipperBase {
         // Clear the output record slot
         self.poly_outs[index] = OutRec::default();
     }
+
+    /// Updates an edge in the active edge list with its next edge in line
+    pub fn update_edge_into_ael(&mut self, e: &mut Rc<RefCell<TEdge>>) -> Result<()> {
+        if e.borrow().next_in_lml.is_none() {
+            return Err(ClipperError::OperationFailure("UpdateEdgeIntoAEL: invalid call".to_string()));
+        }
+
+        let ael_prev = e.borrow().prev_in_ael.clone();
+        let ael_next = e.borrow().next_in_ael.clone();
+        
+        // Set up next edge with same properties
+        let next = e.borrow().next_in_lml.clone().unwrap();
+        next.borrow_mut().out_idx = e.borrow().out_idx;
+        
+        // Update AEL pointers for previous edge
+        if let Some(prev) = ael_prev {
+            prev.borrow_mut().next_in_ael = Some(next.clone());
+        } else {
+            self.active_edges = Some(next.clone());
+        }
+
+        // Update AEL pointers for next edge
+        if let Some(next_edge) = ael_next {
+            next_edge.borrow_mut().prev_in_ael = Some(next.clone());
+        }
+
+        // Copy remaining edge properties
+        next.borrow_mut().side = e.borrow().side;
+        next.borrow_mut().wind_delta = e.borrow().wind_delta;
+        next.borrow_mut().wind_cnt = e.borrow().wind_cnt;
+        next.borrow_mut().wind_cnt2 = e.borrow().wind_cnt2;
+
+        // Update e to point to the new edge
+        *e = next.clone();
+
+        // Update current point and AEL pointers
+        e.borrow_mut().curr = e.borrow().bot;
+        e.borrow_mut().prev_in_ael = ael_prev;
+        e.borrow_mut().next_in_ael = ael_next;
+
+        // Insert new scanbeam if edge isn't horizontal
+        if !CBS::is_horizontal(&e.borrow()) {
+            self.insert_scanbeam(e.borrow().top.y);
+        }
+
+        Ok(())
+    }
+
+    /// Swaps the positions of two edges in the Active Edge List (AEL)
+    pub fn swap_positions_in_ael(&mut self, edge1: &Rc<RefCell<TEdge>>, edge2: &Rc<RefCell<TEdge>>) {
+        // Check that one or other edge hasn't already been removed from AEL
+        if edge1.borrow().next_in_ael.as_ref() == edge1.borrow().prev_in_ael.as_ref() ||
+           edge2.borrow().next_in_ael.as_ref() == edge2.borrow().prev_in_ael.as_ref() {
+            return;
+        }
+
+        // Handle case where edges are adjacent
+        if edge1.borrow().next_in_ael.as_ref() == Some(edge2) {
+            // Get next edge after edge2
+            let next = edge2.borrow().next_in_ael.clone();
+            // Update next's prev pointer if it exists
+            if let Some(ref next_edge) = next {
+                next_edge.borrow_mut().prev_in_ael = Some(edge1.clone());
+            }
+            
+            // Get prev edge before edge1
+            let prev = edge1.borrow().prev_in_ael.clone();
+            // Update prev's next pointer if it exists
+            if let Some(ref prev_edge) = prev {
+                prev_edge.borrow_mut().next_in_ael = Some(edge2.clone());
+            }
+
+            // Update edge2's pointers
+            edge2.borrow_mut().prev_in_ael = prev;
+            edge2.borrow_mut().next_in_ael = Some(edge1.clone());
+            
+            // Update edge1's pointers
+            edge1.borrow_mut().prev_in_ael = Some(edge2.clone());
+            edge1.borrow_mut().next_in_ael = next;
+        }
+        else if edge2.borrow().next_in_ael.as_ref() == Some(edge1) {
+            // Get next edge after edge1
+            let next = edge1.borrow().next_in_ael.clone();
+            // Update next's prev pointer if it exists
+            if let Some(ref next_edge) = next {
+                next_edge.borrow_mut().prev_in_ael = Some(edge2.clone());
+            }
+            
+            // Get prev edge before edge2
+            let prev = edge2.borrow().prev_in_ael.clone();
+            // Update prev's next pointer if it exists
+            if let Some(ref prev_edge) = prev {
+                prev_edge.borrow_mut().next_in_ael = Some(edge1.clone());
+            }
+
+            // Update edge1's pointers
+            edge1.borrow_mut().prev_in_ael = prev;
+            edge1.borrow_mut().next_in_ael = Some(edge2.clone());
+            
+            // Update edge2's pointers
+            edge2.borrow_mut().prev_in_ael = Some(edge1.clone());
+            edge2.borrow_mut().next_in_ael = next;
+        }
+        else {
+            // Handle non-adjacent edges
+            let next1 = edge1.borrow().next_in_ael.clone();
+            let prev1 = edge1.borrow().prev_in_ael.clone();
+            
+            edge1.borrow_mut().next_in_ael = edge2.borrow().next_in_ael.clone();
+            if let Some(ref next) = edge1.borrow().next_in_ael {
+                next.borrow_mut().prev_in_ael = Some(edge1.clone());
+            }
+            
+            edge1.borrow_mut().prev_in_ael = edge2.borrow().prev_in_ael.clone();
+            if let Some(ref prev) = edge1.borrow().prev_in_ael {
+                prev.borrow_mut().next_in_ael = Some(edge1.clone());
+            }
+
+            edge2.borrow_mut().next_in_ael = next1;
+            if let Some(ref next) = edge2.borrow().next_in_ael {
+                next.borrow_mut().prev_in_ael = Some(edge2.clone());
+            }
+            
+            edge2.borrow_mut().prev_in_ael = prev1;
+            if let Some(ref prev) = edge2.borrow().prev_in_ael {
+                prev.borrow_mut().next_in_ael = Some(edge2.clone());
+            }
+        }
+
+        // Update active_edges if either edge was at the start
+        if edge1.borrow().prev_in_ael.is_none() {
+            self.active_edges = Some(edge1.clone());
+        }
+        else if edge2.borrow().prev_in_ael.is_none() {
+            self.active_edges = Some(edge2.clone());
+        }
+    }
 }
 
 impl Default for ClipperBase {

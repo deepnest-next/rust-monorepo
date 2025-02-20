@@ -286,6 +286,21 @@ pub struct OutRec {
     pub poly_node: Option<PolyNode>,
 }
 
+
+impl Default for OutRec {
+    fn default() -> Self {
+        Self {
+            idx: UNASSIGNED,
+            is_hole: false,
+            is_open: false,
+            first_left: None,
+            pts: None,
+            bottom_pt: None,
+            poly_node: None,
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Join 
 ///////////////////////////////////////////////////////////////////////////////

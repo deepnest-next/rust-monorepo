@@ -711,6 +711,27 @@ impl ClipperBase {
     pub fn local_minima_pending(&self) -> bool {
         self.current_lm.is_some()
     }
+
+    /// Creates a new output record and adds it to the output list
+    pub fn create_out_rec(&mut self) -> OutRec {
+        let mut result = OutRec::default();
+
+        // Add to poly_outs list and set index
+        self.poly_outs.push(result.clone());
+        result.idx = (self.poly_outs.len() - 1) as i32;
+
+        result
+    }
+
+    /// Disposes of an output record at the specified index
+    pub fn dispose_out_rec(&mut self, index: usize) {
+        // Clear points reference and the record itself
+        let mut out_rec = &mut self.poly_outs[index];
+        out_rec.pts = None;
+        
+        // Clear the output record slot
+        self.poly_outs[index] = OutRec::default();
+    }
 }
 
 impl Default for ClipperBase {

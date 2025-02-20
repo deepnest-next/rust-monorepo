@@ -44,16 +44,6 @@ impl ClipperBase {
         }
     }
 
-    /// Swaps two CInt values
-    pub fn swap(val1: &mut CInt, val2: &mut CInt) {
-        std::mem::swap(val1, val2);
-    }
-
-    /// Determines if an edge is horizontal
-    pub fn is_horizontal(e: &TEdge) -> bool {
-        e.delta.y == 0
-    }
-
     /// Tests if a point fits within coordinate range
     pub fn range_test(&self, pt: IntPoint, use_full_range: &mut bool) -> Result<()> {
         if *use_full_range {
@@ -342,10 +332,81 @@ impl ClipperBase {
         }
         self.active_edges = None;
     }
+
+    /// Checks if a point is a vertex in the output polygon
+    /// internal
+    fn point_is_vertex(&self, pt: &IntPoint, pp: &OutPt) -> bool {
+        let mut pp2 = pp;
+        loop {
+            if pp2.pt == *pt {
+                return true;
+            }
+            pp2 = &pp2.next.as_ref().unwrap().borrow();
+            if pp2 == pp {
+                break;
+            }
+        }
+        false
+    }
+
+    /// Checks if a point lies on a line segment
+    fn point_on_line_segment(
+        &self, 
+        pt: &IntPoint,
+        line_pt1: &IntPoint,
+        line_pt2: &IntPoint,
+        use_full_range: bool
+    ) -> bool {
+        if (*pt == *line_pt1) || (*pt == *line_pt2) {
+            return true;
+        }
+        
+        // Check if point lies between endpoints using coordinate comparison
+        let x_between = (pt.x > line_pt1.x) == (pt.x < line_pt2.x);
+        let y_between = (pt.y > line_pt1.y) == (pt.y < line_pt2.y);
+
+        if use_full_range {
+            // High precision slope comparison using Int128
+            // Equivalent to: (pt.X - linePt1.X) * (linePt2.Y - linePt1.Y) ==
+            //               (linePt2.X - linePt1.X) * (pt.Y - linePt1.Y)
+            let x_diff1 = (pt.x - line_pt1.x) as i128;
+            let y_diff2 = (line_pt2.y - line_pt1.y) as i128;
+            let x_diff2 = (line_pt2.x - line_pt1.x) as i128;
+            let y_diff1 = (pt.y - line_pt1.y) as i128;
+            x_diff1 * y_diff2 == x_diff2 * y_diff1
+        } else {
+            // Standard precision using i64
+            ((pt.x - line_pt1.x) as i64) * ((line_pt2.y - line_pt1.y) as i64) ==
+            ((line_pt2.x - line_pt1.x) as i64) * ((pt.y - line_pt1.y) as i64)
+        }
+    }
 }
 
 impl Default for ClipperBase {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_point_on_line_segment() {
+        let clipper = ClipperBase::new();
+        let pt = IntPoint::new(5, 5);
+        let line_pt1 = IntPoint::new(0, 0);
+        let line_pt2 = IntPoint::new(10, 10);
+        
+        // Test point on diagonal line
+        assert!(clipper.point_on_line_segment(&pt, &line_pt1, &line_pt2, false));
+        
+        // Test endpoint
+        assert!(clipper.point_on_line_segment(&line_pt1, &line_pt1, &line_pt2, false));
+        
+        // Test point not on line
+        let pt_off = IntPoint::new(5, 6);
+        assert!(!clipper.point_on_line_segment(&pt_off, &line_pt1, &line_pt2, false));
     }
 }

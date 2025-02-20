@@ -1,22 +1,34 @@
+use super::error::*;
+use super::tedge::*; // Import TEdge from the parent module
+use super::types::*;
 use std::cell::RefCell;
 use std::rc::Rc;
-use super::types::*;
-use super::tedge::*; // Import TEdge from the parent module
-use super::error::*;
 
 /// Static methods ported from C# ClipperBase class
 pub struct ClipperBaseStatic;
 
 impl ClipperBaseStatic {
+
+    /// Swaps two CInt values
+    #[inline]
+    pub fn swap(val1: &mut CInt, val2: &mut CInt) {
+        std::mem::swap(val1, val2);
+    }
+
     /// Checks if points are collinear by comparing slopes
-    pub fn slopes_equal(pt1: &IntPoint, pt2: &IntPoint, pt3: &IntPoint, use_full_range: bool) -> bool {
+    pub fn slopes_equal(
+        pt1: &IntPoint,
+        pt2: &IntPoint,
+        pt3: &IntPoint,
+        use_full_range: bool,
+    ) -> bool {
         if use_full_range {
             // Use Int128 for high precision comparison
             (pt1.y - pt2.y) * (pt2.x - pt3.x) == (pt1.x - pt2.x) * (pt2.y - pt3.y)
         } else {
             // Use standard integer math for lower precision
-            (pt1.y - pt2.y) as i64 * (pt2.x - pt3.x) as i64 == 
-            (pt1.x - pt2.x) as i64 * (pt2.y - pt3.y) as i64
+            (pt1.y - pt2.y) as i64 * (pt2.x - pt3.x) as i64
+                == (pt1.x - pt2.x) as i64 * (pt2.y - pt3.y) as i64
         }
     }
 
@@ -27,8 +39,7 @@ impl ClipperBaseStatic {
             e1.delta.y * e2.delta.x == e1.delta.x * e2.delta.y
         } else {
             // Use standard integer math for lower precision
-            (e1.delta.y as i64) * (e2.delta.x as i64) == 
-            (e1.delta.x as i64) * (e2.delta.y as i64)
+            (e1.delta.y as i64) * (e2.delta.x as i64) == (e1.delta.x as i64) * (e2.delta.y as i64)
         }
     }
 
@@ -37,7 +48,7 @@ impl ClipperBaseStatic {
         if *pt1 == *pt3 || *pt1 == *pt2 || *pt3 == *pt2 {
             return false;
         }
-        
+
         if pt1.x != pt3.x {
             (pt2.x > pt1.x) == (pt2.x < pt3.x)
         } else {
@@ -56,19 +67,22 @@ impl ClipperBaseStatic {
             return IntRect::new(0, 0, 0, 0);
         }
 
-        let mut result = IntRect::new(
-            paths[i][0].x,
-            paths[i][0].y,
-            paths[i][0].x,
-            paths[i][0].y
-        );
+        let mut result = IntRect::new(paths[i][0].x, paths[i][0].y, paths[i][0].x, paths[i][0].y);
 
         for path in paths.iter().skip(i) {
             for pt in path {
-                if pt.x < result.left { result.left = pt.x; }
-                if pt.x > result.right { result.right = pt.x; }
-                if pt.y < result.top { result.top = pt.y; }
-                if pt.y > result.bottom { result.bottom = pt.y; }
+                if pt.x < result.left {
+                    result.left = pt.x;
+                }
+                if pt.x > result.right {
+                    result.right = pt.x;
+                }
+                if pt.y < result.top {
+                    result.top = pt.y;
+                }
+                if pt.y > result.bottom {
+                    result.bottom = pt.y;
+                }
             }
         }
         result
@@ -91,7 +105,7 @@ impl ClipperBaseStatic {
         if current_y == edge.bot.y {
             return edge.bot.x;
         }
-        
+
         // Calculate X using the line equation
         edge.bot.x + ((current_y - edge.bot.y) as f64 * edge.dx) as CInt
     }
@@ -100,7 +114,7 @@ impl ClipperBaseStatic {
     pub fn get_intersection(
         edge1: &TEdge,
         edge2: &TEdge,
-        use_full_range: bool
+        use_full_range: bool,
     ) -> Option<IntPoint> {
         if edge1.delta.y == 0 || edge2.delta.y == 0 {
             return None; // One or both edges are horizontal
@@ -114,15 +128,18 @@ impl ClipperBaseStatic {
         }
 
         // Calculate intersection point
-        let y = ((edge1.bot.x - edge2.bot.x) as f64 + 
-                 dx * edge2.bot.y as f64 - 
-                 dy * edge1.bot.y as f64) / (dx - dy);
+        let y = ((edge1.bot.x - edge2.bot.x) as f64 + dx * edge2.bot.y as f64
+            - dy * edge1.bot.y as f64)
+            / (dx - dy);
         let x = edge1.bot.x as f64 + dy * (y - edge1.bot.y as f64);
 
         // Check bounds
         if use_full_range {
-            if x < -HI_RANGE as f64 || x > HI_RANGE as f64 || 
-               y < -HI_RANGE as f64 || y > HI_RANGE as f64 {
+            if x < -HI_RANGE as f64
+                || x > HI_RANGE as f64
+                || y < -HI_RANGE as f64
+                || y > HI_RANGE as f64
+            {
                 return None;
             }
         }

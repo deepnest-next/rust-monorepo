@@ -91,11 +91,13 @@ impl TEdge {
     }
 
     /// Checks if the edge is horizontal
+    #[inline]
     pub fn is_horizontal(&self) -> bool {
         self.delta.y == 0
     }
 
     /// Gets X position at a given Y position
+    #[inline]
     pub fn get_x_at_y(&self, y: CInt) -> CInt {
         if self.top.y == self.bot.y {
             return self.bot.x;

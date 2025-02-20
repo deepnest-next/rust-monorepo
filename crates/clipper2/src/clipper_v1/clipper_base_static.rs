@@ -94,28 +94,6 @@ impl ClipperBaseStatic {
         result
     }
 
-    /// Checks if a polygon/edge is horizontal
-    #[inline]
-    pub fn is_horizontal(e: &TEdge) -> bool {
-        e.delta.y == 0
-    }
-
-    /// Gets X coordinate at a given Y coordinate for an edge
-    pub fn get_x_at_y(edge: &TEdge, current_y: CInt) -> CInt {
-        if edge.top.y == edge.bot.y {
-            return edge.bot.x;
-        }
-        if current_y == edge.top.y {
-            return edge.top.x;
-        }
-        if current_y == edge.bot.y {
-            return edge.bot.x;
-        }
-
-        // Calculate X using the line equation
-        edge.bot.x + ((current_y - edge.bot.y) as f64 * edge.dx) as CInt
-    }
-
     /// Calculates the intersection point of two edges
     pub fn get_intersection(
         edge1: &TEdge,

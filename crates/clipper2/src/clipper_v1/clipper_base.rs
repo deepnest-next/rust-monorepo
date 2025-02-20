@@ -81,6 +81,7 @@ impl ClipperBase {
     }
 
     /// Sets the delta and dx values for an edge
+    #[inline]
     pub fn set_dx(&self, e: &mut TEdge) {
         e.delta.x = e.top.x - e.bot.x;
         e.delta.y = e.top.y - e.bot.y;
@@ -698,6 +699,7 @@ impl ClipperBase {
     }
 
     /// Removes an edge from a double-linked list and returns the next edge
+    #[inline]
     fn remove_edge(&self, e: &TEdge) -> TEdge {
         // Get references to prev and next edges
         let prev = e.prev.as_ref().unwrap();
@@ -748,6 +750,7 @@ impl ClipperBase {
     }
 
     /// Reverses a horizontal edge by swapping its top and bottom X coordinates
+    #[inline]
     fn reverse_horizontal(&self, edge: &mut TEdge) {
         // Swap horizontal edges' top and bottom x's so they follow the natural
         // progression of the bounds - ie so their xbots will align with the
@@ -756,11 +759,13 @@ impl ClipperBase {
     }
 
     /// Returns true if there are more local minima to process
+    #[inline]
     pub fn local_minima_pending(&self) -> bool {
         self.current_lm.is_some()
     }
 
     /// Creates a new output record and adds it to the output list
+    #[inline]
     pub fn create_out_rec(&mut self) -> OutRec {
         let mut result = OutRec::default();
 
@@ -772,6 +777,7 @@ impl ClipperBase {
     }
 
     /// Disposes of an output record at the specified index
+    #[inline]
     pub fn dispose_out_rec(&mut self, index: usize) {
         // Clear points reference and the record itself
         let mut out_rec = &mut self.poly_outs[index];
@@ -821,7 +827,7 @@ impl ClipperBase {
         e.borrow_mut().next_in_ael = ael_next;
 
         // Insert new scanbeam if edge isn't horizontal
-        if !CBS::is_horizontal(&e.borrow()) {
+        if !&e.borrow().is_horizontal() {
             self.insert_scanbeam(e.borrow().top.y);
         }
 

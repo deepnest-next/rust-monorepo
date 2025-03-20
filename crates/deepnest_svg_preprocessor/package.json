@@ -1,0 +1,61 @@
+{
+  "name": "@deepnest/svg-preprocessor",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepnest-next/node-svg-preprocessor"
+  },
+  "version": "0.1.7",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "svg-preprocessor",
+    "triples": {
+      "additional": [
+        "aarch64-apple-darwin",
+        "aarch64-unknown-linux-gnu",
+        "aarch64-unknown-linux-musl",
+        "aarch64-pc-windows-msvc",
+        "armv7-unknown-linux-gnueabihf",
+        "armv7-unknown-linux-musleabihf",
+        "x86_64-unknown-linux-musl",
+        "i686-pc-windows-msvc",
+        "riscv64gc-unknown-linux-gnu"
+      ]
+    }
+  },
+  "license": "AGPL-3.0-only",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.18.4",
+    "ava": "^6.0.1"
+  },
+  "ava": {
+    "timeout": "3m"
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "ava",
+    "universal": "napi universal",
+    "version": "napi version"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e",
+  "optionalDependencies": {
+    "@deepnest/svg-preprocessor-win32-x64-msvc": "0.1.7",
+    "@deepnest/svg-preprocessor-darwin-x64": "0.1.7",
+    "@deepnest/svg-preprocessor-linux-x64-gnu": "0.1.7",
+    "@deepnest/svg-preprocessor-darwin-arm64": "0.1.7",
+    "@deepnest/svg-preprocessor-linux-arm64-gnu": "0.1.7",
+    "@deepnest/svg-preprocessor-linux-arm64-musl": "0.1.7",
+    "@deepnest/svg-preprocessor-win32-arm64-msvc": "0.1.7",
+    "@deepnest/svg-preprocessor-linux-arm-gnueabihf": "0.1.7",
+    "@deepnest/svg-preprocessor-linux-arm-musleabihf": "0.1.7",
+    "@deepnest/svg-preprocessor-linux-x64-musl": "0.1.7",
+    "@deepnest/svg-preprocessor-win32-ia32-msvc": "0.1.7",
+    "@deepnest/svg-preprocessor-linux-riscv64-gnu": "0.1.7"
+  }
+}

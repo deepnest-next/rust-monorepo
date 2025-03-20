@@ -1,0 +1,18 @@
+[package]
+name = "deepnest_svg_preprocessor"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi.workspace = true
+napi-derive.workspace = true
+usvg.workspace = true
+regex.workspace = true
+
+[build-dependencies]
+napi-build.workspace = true

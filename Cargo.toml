@@ -5,7 +5,7 @@ members = [
     "crates/deepnest-lib", "crates/deepnest-types",
     "crates/geometry-utils",
     "crates/node-clipper2",
-    "crates/node-svg-preprocessor",
+    "crates/deepnest_svg_preprocessor",
 ]
 
 [workspace.package]
@@ -43,11 +43,12 @@ napi = { version = "2.16.13", features = [
     "deferred_trace",
 ] }
 napi-derive = { version = "2.16.13", default-features = true}
-usvg = "0.44.0"
-napi-build = "2.1.4"
+usvg = "0.45.0"
+napi-build = "2.1.5"
 cfg-if = "1"
 delegate = "0.13.2" 
 derive_more = { version = "2", features = ["full"] }
+regex = "1.11.1"
 
 
 [profile.release]

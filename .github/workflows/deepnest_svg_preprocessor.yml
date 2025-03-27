@@ -1,4 +1,4 @@
-name: CI
+name: CI svg-preprocessor
 env:
   DEBUG: napi:*
   APP_NAME: svg-preprocessor

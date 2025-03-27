@@ -4,6 +4,7 @@ env:
   APP_NAME: svg-preprocessor
   MACOSX_DEPLOYMENT_TARGET: "10.13"
   WORK_DIR_DOCKER: /build/crates/deepnest_svg_preprocessor
+  MYWORKDIR: ${{ github.workspace}}/crates/deepnest_svg_preprocessor
 permissions:
   contents: write
   id-token: write
@@ -225,7 +226,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
-          path: .
+          path: ${{ env.MYWORKDIR }}/
       - name: List packages
         run: ls -R .
         shell: bash
@@ -255,7 +256,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bindings-x86_64-unknown-linux-gnu
-          path: .
+          path: ${{ env.MYWORKDIR }}/
       - name: List packages
         run: ls -R .
         shell: bash
@@ -287,7 +288,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bindings-x86_64-unknown-linux-musl
-          path: .
+          path: ${{ env.MYWORKDIR }}/
       - name: List packages
         run: ls -R .
         shell: bash
@@ -310,7 +311,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bindings-aarch64-unknown-linux-gnu
-          path: .
+          path: ${{ env.MYWORKDIR }}/
       - name: List packages
         run: ls -R .
         shell: bash
@@ -344,7 +345,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bindings-aarch64-unknown-linux-musl
-          path: .
+          path: ${{ env.MYWORKDIR }}/
       - name: List packages
         run: ls -R .
         shell: bash
@@ -383,7 +384,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: bindings-armv7-unknown-linux-gnueabihf
-          path: .
+          path: ${{ env.MYWORKDIR }}/
       - name: List packages
         run: ls -R .
         shell: bash
@@ -428,7 +429,7 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: ./artifacts
+          path: ${{ env.MYWORKDIR }}/artifacts
       - name: Move artifacts
         run: yarn artifacts
       - name: List packages

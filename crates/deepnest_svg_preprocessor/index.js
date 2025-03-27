@@ -310,9 +310,10 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { PathResult, pointsOnSvgPath, pointsOnSvgPathWithClosedInfo, loadSvgString, loadSvgFile } = nativeBinding
+const { PathResult, computeConvexHull, pointsOnSvgPath, pointsOnSvgPathWithClosedInfo, loadSvgString, loadSvgFile } = nativeBinding
 
 module.exports.PathResult = PathResult
+module.exports.computeConvexHull = computeConvexHull
 module.exports.pointsOnSvgPath = pointsOnSvgPath
 module.exports.pointsOnSvgPathWithClosedInfo = pointsOnSvgPathWithClosedInfo
 module.exports.loadSvgString = loadSvgString

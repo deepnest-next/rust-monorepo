@@ -13,6 +13,7 @@ napi.workspace = true
 napi-derive.workspace = true
 usvg.workspace = true
 regex.workspace = true
+parry2d-f64.workspace = true
 
 [build-dependencies]
 napi-build.workspace = true

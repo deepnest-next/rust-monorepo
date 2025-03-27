@@ -12,13 +12,17 @@ permissions:
       - main
     tags-ignore:
       - "**"
-    paths-ignore:
-      - "**/*.md"
-      - LICENSE
-      - "**/*.gitignore"
-      - .editorconfig
-      - docs/**
+    paths:
+      - "crates/deepnest_svg_preprocessor/**"
+      - "!crates/deepnest_svg_preprocessor/**/*.md"
+      - "!crates/deepnest_svg_preprocessor/LICENSE"
+      - "!crates/deepnest_svg_preprocessor/**/*.gitignore"
+      - "!crates/deepnest_svg_preprocessor/.editorconfig"
+      - "!crates/deepnest_svg_preprocessor/docs/**"
   pull_request: null
+defaults:
+  run:
+    working-directory: ./crates/deepnest_svg_preprocessor
 jobs:
   build:
     strategy:

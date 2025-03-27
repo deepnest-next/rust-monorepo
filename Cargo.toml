@@ -49,6 +49,7 @@ cfg-if = "1"
 delegate = "0.13.2" 
 derive_more = { version = "2", features = ["full"] }
 regex = "1.11.1"
+parry2d-f64 = "0.18"
 
 
 [profile.release]

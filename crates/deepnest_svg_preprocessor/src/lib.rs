@@ -4,6 +4,7 @@ extern crate napi_derive;
 mod path_data_parser;
 mod points_on_curve;
 mod points_on_path;
+mod convex_hull;
 use std::fs;
 use std::path::Path;
 use usvg::Tree;
@@ -12,6 +13,7 @@ use usvg::Tree;
 pub use points_on_path::points_on_path;
 pub use points_on_path::points_on_path_with_closed_info;
 pub use points_on_curve::Point;
+pub use convex_hull::compute_convex_hull;
 
 
 // Thread-local cache for reusing the panic handler

@@ -7,6 +7,10 @@ export interface Point {
   x: number
   y: number
 }
+export interface ConvexHullResult {
+  points: Array<Point>
+}
+export declare function computeConvexHull(points: Array<Point>): ConvexHullResult
 export declare function pointsOnSvgPath(path: string, tolerance?: number | undefined | null, distance?: number | undefined | null): Array<Array<Point>>
 export declare function pointsOnSvgPathWithClosedInfo(path: string, tolerance?: number | undefined | null, distance?: number | undefined | null): PathResult
 export interface LoadSvgResult {

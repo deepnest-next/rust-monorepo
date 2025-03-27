@@ -272,6 +272,7 @@ mod tests {
         assert!(!result.is_empty());
         // Ensure that the first set contains more than one point.
         assert!(result[0].len() > 1);
+        println!("Points: {:?}", result);
     }
     
     #[test]
@@ -281,17 +282,20 @@ mod tests {
         let result = points_on_path_with_closed_info(closed_path.to_string(), None, None).unwrap();
         assert!(!result.points.is_empty());
         assert!(result.closed[0], "Path with Z command should be detected as closed");
+        println!("Points: {:?}", result);
         
         // Test geometrically closed path (first point equals last point)
         let implicitly_closed = "M10,10 L20,10 L20,20 L10,20 L10,10";
         let result = points_on_path_with_closed_info(implicitly_closed.to_string(), None, None).unwrap();
         assert!(!result.points.is_empty());
         assert!(result.closed[0], "Path with first=last point should be detected as closed");
+        println!("Points: {:?}", result);
         
         // Test open path
         let open_path = "M10,10 L20,10 L20,20 L10,20";
         let result = points_on_path_with_closed_info(open_path.to_string(), None, None).unwrap();
         assert!(!result.points.is_empty());
         assert!(!result.closed[0], "Open path should be detected as not closed");
+        println!("Points: {:?}", result);
     }
 }

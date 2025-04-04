@@ -101,7 +101,7 @@ pub struct LoadSVGResult {
 #[napi]
 pub fn load_svg_string(svg_data: String, dpi_scale: Option<f64>) -> LoadSVGResult {
   let mut config = usvg::Options::default();
-  config.dpi = dpi_scale.unwrap_or(96.0) as f64 as f32;
+  config.dpi = dpi_scale.unwrap_or(72.0) as f64 as f32;
   match Tree::from_str(&svg_data, &config) {
     Ok(tree) => {
       let output = tree.to_string(&usvg::WriteOptions::default());
@@ -120,7 +120,7 @@ pub fn load_svg_string(svg_data: String, dpi_scale: Option<f64>) -> LoadSVGResul
 #[napi]
 pub fn load_svg_file(svg_path: String, dpi_scale: Option<f64>) -> LoadSVGResult {
   let mut config = usvg::Options::default();
-  config.dpi = dpi_scale.unwrap_or(96.0) as f64 as f32;
+  config.dpi = dpi_scale.unwrap_or(72.0) as f64 as f32;
   // Konvertieren Sie den String in ein Path
   let path = Path::new(&svg_path);
 

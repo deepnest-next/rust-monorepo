@@ -1,20 +1,23 @@
 #![deny(clippy::all)]
 #[macro_use]
 extern crate napi_derive;
+mod convex_hull;
 mod path_data_parser;
 mod points_on_curve;
 mod points_on_path;
-mod convex_hull;
+mod svg_flip; // added new module for SVG flip
 use std::fs;
 use std::path::Path;
 use usvg::Tree;
 
 // Export both internal functions for benchmarking and testing
+pub use convex_hull::compute_convex_hull;
+pub use points_on_curve::Point;
 pub use points_on_path::points_on_path;
 pub use points_on_path::points_on_path_with_closed_info;
-pub use points_on_curve::Point;
-pub use convex_hull::compute_convex_hull;
 
+// Re-export SVG flip API
+pub use svg_flip::{flip_svg_file, flip_svg_string, FlipDirection, FlipSVGResult};
 
 // Thread-local cache for reusing the panic handler
 thread_local! {
@@ -32,11 +35,10 @@ pub fn points_on_svg_path(
   PANIC_MSG.with(|msg_cell| {
     let msg = &mut *msg_cell.borrow_mut();
     msg.clear();
-    
-    let result = std::panic::catch_unwind(|| {
-      points_on_path::points_on_path(path, tolerance, distance)
-    });
-    
+
+    let result =
+      std::panic::catch_unwind(|| points_on_path::points_on_path(path, tolerance, distance));
+
     match result {
       Ok(path_result) => path_result,
       Err(err) => {
@@ -47,7 +49,10 @@ pub fn points_on_svg_path(
         } else {
           *msg = "Unknown internal error".to_string();
         }
-        Err(napi::Error::from_reason(format!("Internal error processing SVG path: {}", msg)))
+        Err(napi::Error::from_reason(format!(
+          "Internal error processing SVG path: {}",
+          msg
+        )))
       }
     }
   })
@@ -63,11 +68,11 @@ pub fn points_on_svg_path_with_closed_info(
   PANIC_MSG.with(|msg_cell| {
     let msg = &mut *msg_cell.borrow_mut();
     msg.clear();
-    
+
     let result = std::panic::catch_unwind(|| {
       points_on_path::points_on_path_with_closed_info(path, tolerance, distance)
     });
-    
+
     match result {
       Ok(path_result) => path_result,
       Err(err) => {
@@ -78,7 +83,10 @@ pub fn points_on_svg_path_with_closed_info(
         } else {
           *msg = "Unknown internal error".to_string();
         }
-        Err(napi::Error::from_reason(format!("Internal error processing SVG path: {}", msg)))
+        Err(napi::Error::from_reason(format!(
+          "Internal error processing SVG path: {}",
+          msg
+        )))
       }
     }
   })
@@ -91,8 +99,10 @@ pub struct LoadSVGResult {
 }
 
 #[napi]
-pub fn load_svg_string(svg_data: String) -> LoadSVGResult {
-  match Tree::from_str(&svg_data, &usvg::Options::default()) {
+pub fn load_svg_string(svg_data: String, dpi_scale: Option<f64>) -> LoadSVGResult {
+  let mut config = usvg::Options::default();
+  config.dpi = dpi_scale.unwrap_or(96.0) as f64 as f32;
+  match Tree::from_str(&svg_data, &config) {
     Ok(tree) => {
       let output = tree.to_string(&usvg::WriteOptions::default());
       LoadSVGResult {
@@ -108,7 +118,9 @@ pub fn load_svg_string(svg_data: String) -> LoadSVGResult {
 }
 
 #[napi]
-pub fn load_svg_file(svg_path: String) -> LoadSVGResult {
+pub fn load_svg_file(svg_path: String, dpi_scale: Option<f64>) -> LoadSVGResult {
+  let mut config = usvg::Options::default();
+  config.dpi = dpi_scale.unwrap_or(96.0) as f64 as f32;
   // Konvertieren Sie den String in ein Path
   let path = Path::new(&svg_path);
 

@@ -103,7 +103,7 @@ jobs:
         uses: actions/setup-node@v4
         if: ${{ !matrix.settings.docker }}
         with:
-          node-version: 20
+          node-version: 22
           cache: yarn
       - name: Install
         uses: dtolnay/rust-toolchain@stable
@@ -139,7 +139,7 @@ jobs:
         uses: actions/setup-node@v4
         if: matrix.settings.target == 'i686-pc-windows-msvc'
         with:
-          node-version: 20
+          node-version: 22
           cache: yarn
           architecture: x86
       - name: Build in docker
@@ -219,8 +219,8 @@ jobs:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
         node:
-          - "18"
           - "20"
+          - "22"
     runs-on: ${{ matrix.settings.host }}
     steps:
       - uses: actions/checkout@v4
@@ -250,8 +250,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "18"
           - "20"
+          - "22"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -280,8 +280,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "18"
           - "20"
+          - "22"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -312,8 +312,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "18"
           - "20"
+          - "22"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -345,6 +345,12 @@ jobs:
             yarn test
             ls -la
   test-linux-aarch64-musl-binding:
+    strategy:
+      fail-fast: false
+      matrix:
+        node:
+          - "20"
+          - "22"
     name: Test bindings on aarch64-unknown-linux-musl - node@${{ matrix.node }}
     needs:
       - build
@@ -385,8 +391,8 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "18"
           - "20"
+          - "22"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -434,7 +440,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: yarn
 
       - name: Install dependencies
@@ -517,7 +523,7 @@ jobs:
       - name: Setup node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: yarn
       - name: Install dependencies
         run: yarn install

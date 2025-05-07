@@ -11,6 +11,7 @@ export interface Point {
   x: number
   y: number
 }
+export declare function simplifyPolygon(points: Array<Point>, tolerance: number, highQuality: boolean): Array<Point>
 export declare function pointsOnSvgPath(path: string, tolerance?: number | undefined | null, distance?: number | undefined | null): Array<Array<Point>>
 export declare function pointsOnSvgPathWithClosedInfo(path: string, tolerance?: number | undefined | null, distance?: number | undefined | null): PathResult
 export interface LoadSvgResult {

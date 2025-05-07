@@ -2,7 +2,7 @@
   "name": "@deepnest/svg-preprocessor",
   "repository": {
     "type": "git",
-    "url": "https://github.com/deepnest-next/rust-monorepo"
+    "url": "git+https://github.com/deepnest-next/rust-monorepo.git"
   },
   "version": "0.1.10",
   "main": "index.js",
@@ -38,7 +38,7 @@
     "artifacts": "napi artifacts",
     "build": "napi build --platform --release",
     "build:debug": "napi build --platform",
-    "prepublishOnly": "napi prepublish -t npm",
+    "prepublishOnly": "napi prepublish -t npm --skip-gh-release",
     "test": "ava",
     "universal": "napi universal",
     "version": "napi version"

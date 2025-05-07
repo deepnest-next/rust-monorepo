@@ -1,6 +1,6 @@
 {
   "name": "@deepnest/svg-preprocessor-darwin-x64",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/deepnest-next/rust-monorepo"

@@ -4,7 +4,7 @@
     "type": "git",
     "url": "git+https://github.com/deepnest-next/rust-monorepo.git"
   },
-  "version": "0.1.10",
+  "version": "0.2.0",
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {

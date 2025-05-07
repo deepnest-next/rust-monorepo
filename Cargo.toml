@@ -49,7 +49,10 @@ cfg-if = "1"
 delegate = "0.13.2" 
 derive_more = { version = "2", features = ["full"] }
 regex = "1.11.1"
-parry2d-f64 = "0.18"
+parry2d-f64 = "0.20"
+simplifyRS = { version = "0.5.0", features = ["serde"], package = "simplify-polyline" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
 
 
 [profile.release]

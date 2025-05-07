@@ -5,6 +5,7 @@ mod convex_hull;
 mod path_data_parser;
 mod points_on_curve;
 mod points_on_path;
+mod simplify_polygon;
 mod svg_flip; // added new module for SVG flip
 use std::fs;
 use std::path::Path;
@@ -15,6 +16,7 @@ pub use convex_hull::compute_convex_hull;
 pub use points_on_curve::Point;
 pub use points_on_path::points_on_path;
 pub use points_on_path::points_on_path_with_closed_info;
+pub use simplify_polygon::simplify_polygon;
 
 // Re-export SVG flip API
 pub use svg_flip::{flip_svg_file, flip_svg_string, FlipDirection, FlipSVGResult};

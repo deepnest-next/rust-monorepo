@@ -305,6 +305,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "deepnest-plugin-svg"
+version = "0.100.0"
+
+[[package]]
+name = "deepnest-server"
+version = "0.100.0"
+
+[[package]]
 name = "deepnest-types"
 version = "0.100.0"
 dependencies = [

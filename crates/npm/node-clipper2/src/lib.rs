@@ -223,6 +223,7 @@ impl ClipperFloat64 {
 
   #[napi]
   pub fn execute(&mut self, clip_type: ClipType, fill_type: FillType) -> Vec<Vec<PointFloat64>> {
+    #[allow(unreachable_patterns)]
     let clip_type = match clip_type {
       ClipType::None => ClipTypeOrig::None,
       ClipType::Intersection => ClipTypeOrig::Intersection,
@@ -231,6 +232,7 @@ impl ClipperFloat64 {
       ClipType::Xor => ClipTypeOrig::Xor,
       _ => panic!("Invalid PolyType: {:?}", clip_type),
     };
+    #[allow(unreachable_patterns)]
     let fill_type = match fill_type {
       FillType::EvenOdd => FillRule::EvenOdd,
       FillType::NonZero => FillRule::NonZero,

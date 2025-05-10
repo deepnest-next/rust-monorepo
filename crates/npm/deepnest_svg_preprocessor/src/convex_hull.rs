@@ -1,5 +1,4 @@
 use crate::points_on_curve::Point;
-use napi::bindgen_prelude::*;
 use parry2d_f64::math::Point as ParryPoint;
 use parry2d_f64::transformation::convex_hull;
 

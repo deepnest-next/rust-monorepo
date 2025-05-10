@@ -733,7 +733,7 @@ pub mod internal_clipper {
             return false;
         }
         // ensure NOT collinear
-        (res1 != 0.0 || res2 != 0.0 || res3 != 0.0 || res4 != 0.0)
+        res1 != 0.0 || res2 != 0.0 || res3 != 0.0 || res4 != 0.0
     }
 
     /// Returns the closest point on a segment to an off‑point.

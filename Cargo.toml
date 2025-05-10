@@ -1,11 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/clipper2",
-    "crates/deepnest-lib", "crates/deepnest-types",
-    "crates/geometry-utils",
-    "crates/node-clipper2",
-    "crates/deepnest_svg_preprocessor",
+    "crates/libs/clipper2",
+    "crates/libs/deepnest-lib",
+    "crates/libs/deepnest-types",
+    "crates/libs/geometry-utils",
+    "crates/npm/node-clipper2",
+    "crates/npm/deepnest_svg_preprocessor",
+    "crates/bin/deepnest-server",
+    "./crates/plugins/deepnest-plugin-svg", "crates/plugins/deepnest-plugin-svg",
 ]
 
 [workspace.package]

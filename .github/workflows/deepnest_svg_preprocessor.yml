@@ -3,8 +3,8 @@ env:
   DEBUG: napi:*
   APP_NAME: svg-preprocessor
   MACOSX_DEPLOYMENT_TARGET: "10.13"
-  WORK_DIR_DOCKER: /build/crates/deepnest_svg_preprocessor
-  MYWORKDIR: ${{ github.workspace}}/crates/deepnest_svg_preprocessor
+  WORK_DIR_DOCKER: /build/crates/npm/deepnest_svg_preprocessor
+  MYWORKDIR: ${{ github.workspace}}/crates/npm/deepnest_svg_preprocessor
 permissions:
   contents: write
   id-token: write
@@ -27,15 +27,15 @@ permissions:
       - main
     paths:
       - ".github/workflows/deepnest_svg_preprocessor.yml"
-      - "crates/deepnest_svg_preprocessor/**"
-      - "!crates/deepnest_svg_preprocessor/**/*.md"
-      - "!crates/deepnest_svg_preprocessor/LICENSE"
-      - "!crates/deepnest_svg_preprocessor/**/*.gitignore"
-      - "!crates/deepnest_svg_preprocessor/.editorconfig"
-      - "!crates/deepnest_svg_preprocessor/docs/**"
+      - "crates/npm/deepnest_svg_preprocessor/**"
+      - "!crates/npm/deepnest_svg_preprocessor/**/*.md"
+      - "!crates/npm/deepnest_svg_preprocessor/LICENSE"
+      - "!crates/npm/deepnest_svg_preprocessor/**/*.gitignore"
+      - "!crates/npm/deepnest_svg_preprocessor/.editorconfig"
+      - "!crates/npm/deepnest_svg_preprocessor/docs/**"
 defaults:
   run:
-    working-directory: crates/deepnest_svg_preprocessor
+    working-directory: crates/npm/deepnest_svg_preprocessor
 jobs:
   build:
     strategy:
@@ -157,7 +157,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: bindings-${{ matrix.settings.target }}
-          path: ${{ github.workspace}}/crates/deepnest_svg_preprocessor/${{ env.APP_NAME }}.*.node
+          path: ${{ github.workspace}}/crates/npm/deepnest_svg_preprocessor/${{ env.APP_NAME }}.*.node
           if-no-files-found: error
   # build-freebsd:
   #   runs-on: macos-13

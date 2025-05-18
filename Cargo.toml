@@ -5,10 +5,11 @@ members = [
     "crates/libs/deepnest-lib",
     "crates/libs/deepnest-types",
     "crates/libs/geometry-utils",
+    "crates/libs/lightburn-converter",
     "crates/npm/node-clipper2",
     "crates/npm/deepnest_svg_preprocessor",
     "crates/bin/deepnest-server",
-    "./crates/plugins/deepnest-plugin-svg", "crates/plugins/deepnest-plugin-svg",
+    "crates/plugins/deepnest-plugin-svg", "crates/libs/deepnest-common-plugin",
 ]
 
 [workspace.package]

@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightBurnProject AppVersion="1.7.08" DeviceName="GRBL-PicoCNC" FormatVersion="1" MaterialHeight="0" MirrorX="False" MirrorY="False">
+    <Thumbnail Source=""/>
+    <VariableText>
+        <Start Value="0"/>
+        <End Value="999"/>
+        <Current Value="0"/>
+        <Increment Value="1"/>
+        <AutoAdvance Value="0"/>
+    </VariableText>
+    <UIPrefs>
+        <Optimize_ByLayer Value="0"/>
+        <Optimize_ByGroup Value="-1"/>
+        <Optimize_ByPriority Value="1"/>
+        <Optimize_WhichDirection Value="0"/>
+        <Optimize_InnerToOuter Value="1"/>
+        <Optimize_ByDirection Value="0"/>
+        <Optimize_ReduceTravel Value="1"/>
+        <Optimize_HideBacklash Value="0"/>
+        <Optimize_ReduceDirChanges Value="0"/>
+        <Optimize_ChooseCorners Value="0"/>
+        <Optimize_AllowReverse Value="1"/>
+        <Optimize_RemoveOverlaps Value="0"/>
+        <Optimize_OptimalEntryPoint Value="1"/>
+        <Optimize_OverlapDist Value="0.025"/>
+    </UIPrefs>
+    <CutSetting type="Cut">
+        <index Value="0"/>
+        <name Value="Schneiden"/>
+        <minPower Value="17.5"/>
+        <maxPower Value="90"/>
+        <maxPower2 Value="20"/>
+        <speed Value="4.16667"/>
+        <angle Value="90"/>
+        <priority Value="0"/>
+        <tabCount Value="1"/>
+        <tabCountMax Value="1"/>
+        <tabSpacing Value="50.04"/>
+    </CutSetting>
+    <Shape Type="Group">
+        <XForm>1 0 0 1 0 0</XForm>
+        <Children>
+            <Shape Type="Rect" CutIndex="0">
+                <W Value="50"/>
+                <H Value="30"/>
+                <XForm>1 0 0 1 10 10</XForm>
+            </Shape>
+            <Shape Type="Ellipse" CutIndex="0">
+                <Rx Value="40"/>
+                <Ry Value="20"/>
+                <XForm>1 0 0 1 100 30</XForm>
+            </Shape>
+            <Shape Type="Path" CutIndex="0">
+                <XForm>1 0 0 1 0 0</XForm>
+            </Shape>
+            <Shape Type="Group">
+                <XForm>1 0 0 1 50 0</XForm>
+                <Children>
+                    <Shape Type="Rect" CutIndex="0">
+                        <W Value="30"/>
+                        <H Value="20"/>
+                        <XForm>1 0 0 1 0 0</XForm>
+                    </Shape>
+                    <Shape Type="Ellipse" CutIndex="0">
+                        <Rx Value="10"/>
+                        <Ry Value="10"/>
+                        <XForm>1 0 0 1 50 10</XForm>
+                    </Shape>
+                </Children>
+            </Shape>
+        </Children>
+    </Shape>
+    <Notes ShowOnLoad="0" Notes=""/>
+</LightBurnProject>

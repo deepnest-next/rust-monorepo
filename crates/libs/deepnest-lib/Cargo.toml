@@ -7,6 +7,7 @@ license.workspace = true
 
 [dependencies]
 deepnest-types = { path = "../deepnest-types" }
+deepnest-common-plugin = { path = "../deepnest-common-plugin" }
 babushka = { path = "../babushka" }
 
 [features]

@@ -1,0 +1,415 @@
+// LightBurn file format handling
+
+use std::io::Cursor;
+use quick_xml::{Writer, events::{Event, BytesStart, BytesEnd}};
+
+use crate::types::{
+    ConversionError, LightburnFile, SvgFile, Shape, ShapeType, Transform, Point, Path, PathCommand
+};
+
+/// Convert from SVG to LightBurn format
+pub fn from_svg(svg_file: &SvgFile) -> Result<LightburnFile, ConversionError> {
+    // Create a LightBurn file with the same shapes as the SVG
+    // For simplicity, we just copy the shapes but assign cut indices
+    
+    let mut shapes = Vec::with_capacity(svg_file.shapes.len());
+    let mut cut_index = 0;
+    
+    // Process shapes, assigning cut indices
+    for shape in &svg_file.shapes {
+        shapes.push(assign_cut_indices(shape, &mut cut_index));
+    }
+    
+    Ok(LightburnFile {
+        shapes,
+        width: svg_file.width.clone(),
+        height: svg_file.height.clone(),
+        view_box: svg_file.view_box.clone(),
+        cut_settings: Default::default(), // Default cut settings
+    })
+}
+
+/// Recursively assign cut indices to shapes
+fn assign_cut_indices(shape: &Shape, cut_index: &mut usize) -> Shape {
+    let mut new_shape = shape.clone();
+    
+    // Assign a cut index to this shape if it's not a group
+    if !matches!(shape.shape_type, ShapeType::Group) {
+        new_shape.cut_index = Some(*cut_index);
+        *cut_index += 1;
+    }
+    
+    // Recursively process children if this is a group
+    if let Some(children) = &shape.children {
+        let mut new_children = Vec::with_capacity(children.len());
+        
+        for child in children {
+            new_children.push(assign_cut_indices(child, cut_index));
+        }
+        
+        new_shape.children = Some(new_children);
+    }
+    
+    new_shape
+}
+
+/// Generate LightBurn XML content
+pub fn generate(lightburn_file: &LightburnFile) -> Result<String, ConversionError> {
+    let buffer = Cursor::new(Vec::new());
+    let mut writer = Writer::new_with_indent(buffer, b' ', 4);
+    
+    // Start XML document
+    writer.write_event(Event::Decl(quick_xml::events::BytesDecl::new("1.0", Some("UTF-8"), None)))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Create LightBurn root element
+    let elem = BytesStart::new("LightBurnProject");
+    
+    writer.write_event(Event::Start(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Write header information (simplified for this example)
+    write_header(&mut writer)?;
+    
+    // Write cut settings (simplified for this example)
+    write_cut_settings(&mut writer)?;
+    
+    // Write shapes
+    for shape in &lightburn_file.shapes {
+        write_shape(&mut writer, shape, 0)?;
+    }
+    
+    // End root element
+    writer.write_event(Event::End(BytesEnd::new("LightBurnProject")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    String::from_utf8(writer.into_inner().into_inner())
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))
+}
+
+/// Write header information to the XML writer
+fn write_header<W: std::io::Write>(writer: &mut Writer<W>) -> Result<(), ConversionError> {
+    // Version element
+    let mut elem = BytesStart::new("Version");
+    elem.push_attribute((">", "100"));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // MaterialHeight element
+    elem = BytesStart::new("MaterialHeight");
+    elem.push_attribute((">", "0"));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    Ok(())
+}
+
+/// Write cut settings to the XML writer (simplified)
+fn write_cut_settings<W: std::io::Write>(writer: &mut Writer<W>) -> Result<(), ConversionError> {
+    let mut elem = BytesStart::new("CutSetting");
+    elem.push_attribute(("type", "Cut"));
+    elem.push_attribute(("index", "0"));
+    elem.push_attribute(("speed", "20"));
+    elem.push_attribute(("power", "80"));
+    elem.push_attribute(("priority", "0"));
+    
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    Ok(())
+}
+
+/// Write the transformation matrix for a shape
+fn write_transform<W: std::io::Write>(writer: &mut Writer<W>, shape: &Shape) -> Result<(), ConversionError> {
+    let xform_elem = BytesStart::new("XForm");
+    
+    writer.write_event(Event::Start(xform_elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Get transform or use default
+    let transform = shape.transform.unwrap_or_default();
+    
+    // Write transform values
+    let mut elem = BytesStart::new("a");
+    elem.push_attribute(("V", transform.a.to_string().as_str()));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    elem = BytesStart::new("b");
+    elem.push_attribute(("V", transform.b.to_string().as_str()));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    elem = BytesStart::new("c");
+    elem.push_attribute(("V", transform.c.to_string().as_str()));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    elem = BytesStart::new("d");
+    elem.push_attribute(("V", transform.d.to_string().as_str()));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    elem = BytesStart::new("e");
+    elem.push_attribute(("V", transform.e.to_string().as_str()));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    elem = BytesStart::new("f");
+    elem.push_attribute(("V", transform.f.to_string().as_str()));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // End XForm element
+    writer.write_event(Event::End(BytesEnd::new("XForm")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    Ok(())
+}
+
+/// Write a shape to the XML writer
+fn write_shape<W: std::io::Write>(writer: &mut Writer<W>, shape: &Shape, cut_index: usize) -> Result<(), ConversionError> {
+    let mut elem = BytesStart::new("Shape");
+    
+    match &shape.shape_type {
+        ShapeType::Rect => {
+            elem.push_attribute(("Type", "Rect"));
+            elem.push_attribute(("CutIndex", cut_index.to_string().as_str()));
+            
+            writer.write_event(Event::Start(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            
+            if let Some(width) = shape.width {
+                elem = BytesStart::new("W");
+                elem.push_attribute(("Value", width.to_string().as_str()));
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            }
+            
+            if let Some(height) = shape.height {
+                elem = BytesStart::new("H");
+                elem.push_attribute(("Value", height.to_string().as_str()));
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            }
+            
+            if let Some(cr) = shape.corner_radius {
+                elem = BytesStart::new("Cr");
+                elem.push_attribute(("Value", cr.to_string().as_str()));
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            }
+            
+            write_transform(writer, shape)?;
+        },
+        ShapeType::Ellipse => {
+            elem.push_attribute(("Type", "Ellipse"));
+            elem.push_attribute(("CutIndex", cut_index.to_string().as_str()));
+            
+            writer.write_event(Event::Start(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            
+            if let Some(rx) = shape.rx {
+                elem = BytesStart::new("Rx");
+                elem.push_attribute(("Value", rx.to_string().as_str()));
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            }
+            
+            if let Some(ry) = shape.ry {
+                elem = BytesStart::new("Ry");
+                elem.push_attribute(("Value", ry.to_string().as_str()));
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            }
+            
+            write_transform(writer, shape)?;
+        },
+        ShapeType::Path => {
+            elem.push_attribute(("Type", "Path"));
+            elem.push_attribute(("CutIndex", cut_index.to_string().as_str()));
+            
+            writer.write_event(Event::Start(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            
+            // Write path data if present
+            if let Some(path) = &shape.path {
+                write_path(writer, path)?;
+            }
+            
+            write_transform(writer, shape)?;
+        },
+        ShapeType::Group => {
+            elem.push_attribute(("Type", "Group"));
+            
+            writer.write_event(Event::Start(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            
+            // Write child shapes
+            if let Some(children) = &shape.children {
+                for child in children {
+                    let child_cut_index = child.cut_index.unwrap_or(cut_index);
+                    write_shape(writer, child, child_cut_index)?;
+                }
+            }
+            
+            write_transform(writer, shape)?;
+        },
+        ShapeType::Other(type_name) => {
+            // Handle other shape types or skip them
+            elem.push_attribute(("Type", type_name.as_str()));
+            elem.push_attribute(("CutIndex", cut_index.to_string().as_str()));
+            
+            writer.write_event(Event::Start(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            
+            write_transform(writer, shape)?;
+        }
+    }
+    
+    // End Shape element
+    writer.write_event(Event::End(BytesEnd::new("Shape")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    Ok(())
+}
+
+/// Write path data to the XML writer
+fn write_path<W: std::io::Write>(writer: &mut Writer<W>, path: &Path) -> Result<(), ConversionError> {
+    let path_elem = BytesStart::new("PathData");
+    
+    writer.write_event(Event::Start(path_elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Write points
+    let mut elem = BytesStart::new("Points");
+    elem.push_attribute(("Count", path.points.len().to_string().as_str()));
+    
+    writer.write_event(Event::Start(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    for point in &path.points {
+        write_point(writer, point)?;
+    }
+    
+    writer.write_event(Event::End(BytesEnd::new("Points")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Write commands
+    elem = BytesStart::new("Commands");
+    elem.push_attribute(("Count", path.commands.len().to_string().as_str()));
+    
+    writer.write_event(Event::Start(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    for cmd in &path.commands {
+        write_command(writer, cmd)?;
+    }
+    
+    writer.write_event(Event::End(BytesEnd::new("Commands")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // End PathData element
+    writer.write_event(Event::End(BytesEnd::new("PathData")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    Ok(())
+}
+
+/// Write a path point to the XML writer
+fn write_point<W: std::io::Write>(writer: &mut Writer<W>, point: &Point) -> Result<(), ConversionError> {
+    let mut elem = BytesStart::new("Point");
+    
+    writer.write_event(Event::Start(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Write point coordinates
+    elem = BytesStart::new("X");
+    elem.push_attribute(("Value", point.x.to_string().as_str()));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    elem = BytesStart::new("Y");
+    elem.push_attribute(("Value", point.y.to_string().as_str()));
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Write control points if present
+    if let Some(c0x) = point.c0x {
+        elem = BytesStart::new("C0X");
+        elem.push_attribute(("Value", c0x.to_string().as_str()));
+        writer.write_event(Event::Empty(elem))
+            .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    }
+    
+    if let Some(c0y) = point.c0y {
+        elem = BytesStart::new("C0Y");
+        elem.push_attribute(("Value", c0y.to_string().as_str()));
+        writer.write_event(Event::Empty(elem))
+            .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    }
+    
+    if let Some(c1x) = point.c1x {
+        elem = BytesStart::new("C1X");
+        elem.push_attribute(("Value", c1x.to_string().as_str()));
+        writer.write_event(Event::Empty(elem))
+            .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    }
+    
+    if let Some(c1y) = point.c1y {
+        elem = BytesStart::new("C1Y");
+        elem.push_attribute(("Value", c1y.to_string().as_str()));
+        writer.write_event(Event::Empty(elem))
+            .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    }
+    
+    // End Point element
+    writer.write_event(Event::End(BytesEnd::new("Point")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    Ok(())
+}
+
+/// Write a path command to the XML writer
+fn write_command<W: std::io::Write>(writer: &mut Writer<W>, cmd: &PathCommand) -> Result<(), ConversionError> {
+    let mut elem = BytesStart::new("Command");
+    
+    match cmd {
+        PathCommand::MoveTo(p0, p1) => {
+            elem.push_attribute(("Type", "MoveTo"));
+            elem.push_attribute(("P0", p0.to_string().as_str()));
+            elem.push_attribute(("P1", p1.to_string().as_str()));
+        },
+        PathCommand::LineTo(p0, p1) => {
+            elem.push_attribute(("Type", "LineTo"));
+            elem.push_attribute(("P0", p0.to_string().as_str()));
+            elem.push_attribute(("P1", p1.to_string().as_str()));
+        },
+        PathCommand::BezierTo(p0, p1) => {
+            elem.push_attribute(("Type", "BezierTo"));
+            elem.push_attribute(("P0", p0.to_string().as_str()));
+            elem.push_attribute(("P1", p1.to_string().as_str()));
+        },
+        PathCommand::Close => {
+            elem.push_attribute(("Type", "Close"));
+        },
+    }
+    
+    writer.write_event(Event::Empty(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    Ok(())
+}
+
+/// Convert from LightBurn to SVG format
+pub fn to_svg(lightburn_file: &LightburnFile) -> Result<SvgFile, ConversionError> {
+    // Create an SVG file with the same shapes as the LightBurn file
+    // For simplicity, we just copy the shapes
+    
+    Ok(SvgFile {
+        shapes: lightburn_file.shapes.clone(),
+        width: lightburn_file.width.clone(),
+        height: lightburn_file.height.clone(),
+        view_box: lightburn_file.view_box.clone(),
+    })
+}

@@ -1,0 +1,572 @@
+//! SVG file parsing and generation
+
+use roxmltree::{Document, Node};
+use quick_xml::{Writer, events::{Event, BytesStart, BytesEnd, BytesText}};
+use std::io::Cursor;
+use std::collections::HashMap;
+
+use crate::types::{
+    ConversionError, LightburnFile, SvgFile, Shape, ShapeType,
+    Transform, Point, Path, PathCommand,
+};
+
+/// Parse SVG file content into our internal representation
+pub fn parse(content: &str) -> Result<SvgFile, ConversionError> {
+    let doc = Document::parse(content)
+        .map_err(|e| ConversionError::XmlParseError(e.to_string()))?;
+    
+    let root = doc.root_element();
+    if !root.has_tag_name("svg") {
+        return Err(ConversionError::XmlParseError("Root element is not <svg>".to_string()));
+    }
+    
+    // Extract basic SVG info
+    let width = root.attribute("width").map(|s| s.to_string());
+    let height = root.attribute("height").map(|s| s.to_string());
+    let view_box = root.attribute("viewBox").map(|s| s.to_string());
+    
+    // Parse shapes from the SVG
+    let shapes = parse_svg_shapes(&root)?;
+    
+    Ok(SvgFile {
+        width,
+        height,
+        view_box,
+        shapes,
+    })
+}
+
+/// Parse shapes from an SVG document
+fn parse_svg_shapes(node: &Node) -> Result<Vec<Shape>, ConversionError> {
+    let mut shapes = Vec::new();
+    
+    // Process direct child elements that are shapes
+    for child in node.children().filter(|n| n.is_element()) {
+        match child.tag_name().name() {
+            "rect" => {
+                shapes.push(parse_svg_rect(&child)?);
+            },
+            "circle" => {
+                shapes.push(parse_svg_circle(&child)?);
+            },
+            "ellipse" => {
+                shapes.push(parse_svg_ellipse(&child)?);
+            },
+            "path" => {
+                shapes.push(parse_svg_path(&child)?);
+            },
+            "g" => {
+                shapes.push(parse_svg_group(&child)?);
+            },
+            // Skip other SVG elements for now
+            _ => {
+                // Recursively process non-shape containers
+                if child.has_children() {
+                    let mut child_shapes = parse_svg_shapes(&child)?;
+                    shapes.append(&mut child_shapes);
+                }
+            }
+        }
+    }
+    
+    Ok(shapes)
+}
+
+/// Parse an SVG rectangle
+fn parse_svg_rect(node: &Node) -> Result<Shape, ConversionError> {
+    let mut shape = Shape {
+        shape_type: ShapeType::Rect,
+        cut_index: Some(0), // Default cut index
+        transform: parse_svg_transform(node.attribute("transform")),
+        width: node.attribute("width").and_then(|s| s.parse::<f64>().ok()),
+        height: node.attribute("height").and_then(|s| s.parse::<f64>().ok()),
+        corner_radius: node.attribute("rx").and_then(|s| s.parse::<f64>().ok()),
+        rx: None,
+        ry: None,
+        path: None,
+        children: None,
+        style: node.attribute("style").map(|s| s.to_string()),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    // If width or height is missing, this is invalid
+    if shape.width.is_none() || shape.height.is_none() {
+        return Err(ConversionError::InvalidShapeData("Rectangle missing width or height".to_string()));
+    }
+    
+    Ok(shape)
+}
+
+/// Parse an SVG circle
+fn parse_svg_circle(node: &Node) -> Result<Shape, ConversionError> {
+    let r = node.attribute("r")
+        .and_then(|s| s.parse::<f64>().ok())
+        .ok_or(ConversionError::InvalidShapeData("Circle missing radius".to_string()))?;
+    
+    let cx = node.attribute("cx")
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    
+    let cy = node.attribute("cy")
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    
+    let mut shape = Shape {
+        shape_type: ShapeType::Ellipse,
+        cut_index: Some(0), // Default cut index
+        transform: parse_svg_transform(node.attribute("transform")),
+        width: None,
+        height: None,
+        corner_radius: None,
+        rx: Some(r),
+        ry: Some(r),
+        path: None,
+        children: None,
+        style: node.attribute("style").map(|s| s.to_string()),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    // If transform is not set, create one for the center offset
+    if shape.transform.is_none() && (cx != 0.0 || cy != 0.0) {
+        shape.transform = Some(Transform {
+            a: 1.0, b: 0.0, c: 0.0, d: 1.0,
+            e: cx, f: cy,
+        });
+    }
+    
+    Ok(shape)
+}
+
+/// Parse an SVG ellipse
+fn parse_svg_ellipse(node: &Node) -> Result<Shape, ConversionError> {
+    let rx = node.attribute("rx")
+        .and_then(|s| s.parse::<f64>().ok())
+        .ok_or(ConversionError::InvalidShapeData("Ellipse missing rx".to_string()))?;
+    
+    let ry = node.attribute("ry")
+        .and_then(|s| s.parse::<f64>().ok())
+        .ok_or(ConversionError::InvalidShapeData("Ellipse missing ry".to_string()))?;
+    
+    let cx = node.attribute("cx")
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    
+    let cy = node.attribute("cy")
+        .and_then(|s| s.parse::<f64>().ok())
+        .unwrap_or(0.0);
+    
+    let mut shape = Shape {
+        shape_type: ShapeType::Ellipse,
+        cut_index: Some(0), // Default cut index
+        transform: parse_svg_transform(node.attribute("transform")),
+        width: None,
+        height: None,
+        corner_radius: None,
+        rx: Some(rx),
+        ry: Some(ry),
+        path: None,
+        children: None,
+        style: node.attribute("style").map(|s| s.to_string()),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    // If transform is not set, create one for the center offset
+    if shape.transform.is_none() && (cx != 0.0 || cy != 0.0) {
+        shape.transform = Some(Transform {
+            a: 1.0, b: 0.0, c: 0.0, d: 1.0,
+            e: cx, f: cy,
+        });
+    }
+    
+    Ok(shape)
+}
+
+/// Parse an SVG path
+fn parse_svg_path(node: &Node) -> Result<Shape, ConversionError> {
+    let mut shape = Shape {
+        shape_type: ShapeType::Path,
+        cut_index: Some(0), // Default cut index
+        transform: parse_svg_transform(node.attribute("transform")),
+        width: None,
+        height: None,
+        corner_radius: None,
+        rx: None,
+        ry: None,
+        path: Some(Path { points: Vec::new(), commands: Vec::new() }),
+        children: None,
+        style: node.attribute("style").map(|s| s.to_string()),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    // Parse d attribute to path data - this is a simplified implementation
+    if let Some(d) = node.attribute("d") {
+        shape.path = Some(parse_svg_path_data(d)?);
+    }
+    
+    Ok(shape)
+}
+
+/// Parse an SVG path data string 
+fn parse_svg_path_data(d: &str) -> Result<Path, ConversionError> {
+    // This is a simplified parser that would need more work for a full implementation
+    // For now, we'll just create a path with empty data
+    
+    // A full implementation would parse the SVG path commands (M, L, C, Z, etc.)
+    // and convert them to our internal path representation
+    
+    Ok(Path { 
+        points: Vec::new(),
+        commands: Vec::new(),
+    })
+}
+
+/// Parse an SVG group
+fn parse_svg_group(node: &Node) -> Result<Shape, ConversionError> {
+    let children = parse_svg_shapes(node)?;
+    
+    let shape = Shape {
+        shape_type: ShapeType::Group,
+        cut_index: None,
+        transform: parse_svg_transform(node.attribute("transform")),
+        width: None,
+        height: None,
+        corner_radius: None,
+        rx: None,
+        ry: None,
+        path: None,
+        children: Some(children),
+        style: node.attribute("style").map(|s| s.to_string()),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    Ok(shape)
+}
+
+/// Parse SVG transform attribute
+fn parse_svg_transform(transform: Option<&str>) -> Option<Transform> {
+    transform.and_then(|t| {
+        if t.starts_with("matrix(") && t.ends_with(')') {
+            // Parse matrix transformation
+            let matrix_str = &t[7..t.len()-1];
+            let values: Vec<f64> = matrix_str.split(',')
+                .filter_map(|s| s.trim().parse::<f64>().ok())
+                .collect();
+            
+            if values.len() == 6 {
+                Some(Transform {
+                    a: values[0],
+                    b: values[1],
+                    c: values[2],
+                    d: values[3],
+                    e: values[4],
+                    f: values[5],
+                })
+            } else {
+                None
+            }
+        } else if t.starts_with("translate(") && t.ends_with(')') {
+            // Parse translate transformation
+            let translate_str = &t[10..t.len()-1];
+            let values: Vec<f64> = translate_str.split(',')
+                .filter_map(|s| s.trim().parse::<f64>().ok())
+                .collect();
+            
+            if values.len() >= 1 {
+                Some(Transform {
+                    a: 1.0,
+                    b: 0.0,
+                    c: 0.0,
+                    d: 1.0,
+                    e: values[0],
+                    f: if values.len() >= 2 { values[1] } else { 0.0 },
+                })
+            } else {
+                None
+            }
+        } else {
+            // We could add more transform types (scale, rotate, etc.)
+            None
+        }
+    })
+}
+
+/// Generate SVG from our internal representation
+pub fn generate(lightburn_file: &LightburnFile) -> Result<String, ConversionError> {
+    let mut buffer = Cursor::new(Vec::new());
+    let mut writer = Writer::new_with_indent(&mut buffer, b' ', 2);
+    
+    // Start XML document
+    writer.write_event(Event::Decl(quick_xml::events::BytesDecl::new("1.0", Some("UTF-8"), None)))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Create SVG root element with default attributes
+    let mut elem = BytesStart::new("svg");
+    elem.push_attribute(("width", "100%"));
+    elem.push_attribute(("height", "100%"));
+    elem.push_attribute(("viewBox", "0 0 794 560"));
+    elem.push_attribute(("version", "1.1"));
+    elem.push_attribute(("xmlns", "http://www.w3.org/2000/svg"));
+    elem.push_attribute(("xmlns:xlink", "http://www.w3.org/1999/xlink"));
+    elem.push_attribute(("xml:space", "preserve"));
+    elem.push_attribute(("xmlns:serif", "http://www.serif.com/"));
+    elem.push_attribute(("style", "fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;"));
+    
+    writer.write_event(Event::Start(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Write shapes - recursively process them
+    for shape in &lightburn_file.shapes {
+        write_svg_shape(&mut writer, shape)?;
+    }
+    
+    // End root element
+    writer.write_event(Event::End(BytesEnd::new("svg")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    String::from_utf8(buffer.into_inner())
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))
+}
+
+/// Write a shape to the SVG document
+fn write_svg_shape(writer: &mut Writer<Cursor<Vec<u8>>>, shape: &Shape) -> Result<(), ConversionError> {
+    match shape.shape_type {
+        ShapeType::Rect => {
+            let mut elem = BytesStart::new("rect");
+            
+            // Set position - may come from transform
+            if let Some(transform) = &shape.transform {
+                elem.push_attribute(("x", &transform.e.to_string()));
+                elem.push_attribute(("y", &transform.f.to_string()));
+            } else {
+                elem.push_attribute(("x", "0"));
+                elem.push_attribute(("y", "0"));
+            }
+            
+            if let Some(width) = shape.width {
+                elem.push_attribute(("width", &width.to_string()));
+            }
+            
+            if let Some(height) = shape.height {
+                elem.push_attribute(("height", &height.to_string()));
+            }
+            
+            if let Some(cr) = shape.corner_radius {
+                elem.push_attribute(("rx", &cr.to_string()));
+                elem.push_attribute(("ry", &cr.to_string()));
+            }
+            
+            // Add style attributes
+            add_svg_style_attributes(&mut elem, shape);
+            
+            writer.write_event(Event::Empty(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+        },
+        ShapeType::Ellipse => {
+            // Determine if it's a circle (rx == ry) or ellipse
+            if shape.rx == shape.ry {
+                // It's a circle
+                let mut elem = BytesStart::new("circle");
+                
+                // Center position - may come from transform
+                if let Some(transform) = &shape.transform {
+                    elem.push_attribute(("cx", &transform.e.to_string()));
+                    elem.push_attribute(("cy", &transform.f.to_string()));
+                } else {
+                    elem.push_attribute(("cx", "0"));
+                    elem.push_attribute(("cy", "0"));
+                }
+                
+                if let Some(r) = shape.rx {
+                    elem.push_attribute(("r", &r.to_string()));
+                }
+                
+                // Add style attributes
+                add_svg_style_attributes(&mut elem, shape);
+                
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            } else {
+                // It's an ellipse
+                let mut elem = BytesStart::new("ellipse");
+                
+                // Center position - may come from transform
+                if let Some(transform) = &shape.transform {
+                    elem.push_attribute(("cx", &transform.e.to_string()));
+                    elem.push_attribute(("cy", &transform.f.to_string()));
+                } else {
+                    elem.push_attribute(("cx", "0"));
+                    elem.push_attribute(("cy", "0"));
+                }
+                
+                if let Some(rx) = shape.rx {
+                    elem.push_attribute(("rx", &rx.to_string()));
+                }
+                
+                if let Some(ry) = shape.ry {
+                    elem.push_attribute(("ry", &ry.to_string()));
+                }
+                
+                // Add style attributes
+                add_svg_style_attributes(&mut elem, shape);
+                
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            }
+        },
+        ShapeType::Path => {
+            let mut elem = BytesStart::new("path");
+            
+            if let Some(path) = &shape.path {
+                // Convert path data to SVG path string
+                let d = convert_path_to_svg_commands(path);
+                if !d.is_empty() {
+                    elem.push_attribute(("d", &d));
+                }
+            }
+            
+            // Add transform if present
+            if let Some(transform) = &shape.transform {
+                elem.push_attribute(("transform", &format!(
+                    "matrix({},{},{},{},{},{})", 
+                    transform.a, transform.b, transform.c, transform.d, transform.e, transform.f
+                )));
+            }
+            
+            // Add style attributes
+            add_svg_style_attributes(&mut elem, shape);
+            
+            writer.write_event(Event::Empty(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+        },
+        ShapeType::Group => {
+            let mut elem = BytesStart::new("g");
+            
+            // Add transform if present
+            if let Some(transform) = &shape.transform {
+                elem.push_attribute(("transform", &format!(
+                    "matrix({},{},{},{},{},{})", 
+                    transform.a, transform.b, transform.c, transform.d, transform.e, transform.f
+                )));
+            }
+            
+            // Add style attributes
+            add_svg_style_attributes(&mut elem, shape);
+            
+            writer.write_event(Event::Start(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            
+            // Write children recursively
+            if let Some(children) = &shape.children {
+                for child in children {
+                    write_svg_shape(writer, child)?;
+                }
+            }
+            
+            writer.write_event(Event::End(BytesEnd::new("g")))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+        },
+        ShapeType::Other(_) => {
+            // Skip unknown shape types
+        }
+    }
+    
+    Ok(())
+}
+
+/// Convert path to SVG path commands string
+fn convert_path_to_svg_commands(path: &Path) -> String {
+    if path.points.is_empty() {
+        return String::new();
+    }
+    
+    let mut d = String::new();
+    let mut current_point = 0;
+    
+    // First point is typically a move command
+    if !path.points.is_empty() {
+        d.push_str(&format!("M{},{} ", path.points[0].x, path.points[0].y));
+        current_point = 1;
+    }
+    
+    // Process commands
+    for cmd in &path.commands {
+        match cmd {
+            PathCommand::MoveTo(_, p1) => {
+                let p = &path.points[*p1];
+                d.push_str(&format!("M{},{} ", p.x, p.y));
+                current_point = *p1;
+            },
+            PathCommand::LineTo(_, p1) => {
+                let p = &path.points[*p1];
+                d.push_str(&format!("L{},{} ", p.x, p.y));
+                current_point = *p1;
+            },
+            PathCommand::BezierTo(p0, p1) => {
+                let p0 = &path.points[*p0];
+                let p1 = &path.points[*p1];
+                
+                // For cubic bezier, we need control points
+                if let (Some(c0x), Some(c0y)) = (p0.c0x, p0.c0y) {
+                    d.push_str(&format!("C{},{} ", c0x, c0y));
+                    
+                    if let (Some(c1x), Some(c1y)) = (p1.c1x, p1.c1y) {
+                        d.push_str(&format!("{},{} ", c1x, c1y));
+                    }
+                    
+                    d.push_str(&format!("{},{} ", p1.x, p1.y));
+                } else {
+                    // If no control points, fall back to a line
+                    d.push_str(&format!("L{},{} ", p1.x, p1.y));
+                }
+                
+                current_point = *p1;
+            },
+            PathCommand::Close => {
+                d.push_str("Z ");
+            },
+        }
+    }
+    
+    d
+}
+
+/// Add style attributes to an SVG element
+fn add_svg_style_attributes(elem: &mut BytesStart, shape: &Shape) {
+    let mut style_map = HashMap::new();
+    
+    // Set default styles
+    style_map.insert("fill".to_string(), "#ebebeb".to_string());
+    style_map.insert("stroke".to_string(), "#000".to_string());
+    style_map.insert("stroke-width".to_string(), "0.38px".to_string());
+    
+    // Override with specific attributes if present
+    if let Some(fill) = &shape.fill {
+        style_map.insert("fill".to_string(), fill.clone());
+    }
+    
+    if let Some(stroke) = &shape.stroke {
+        style_map.insert("stroke".to_string(), stroke.clone());
+    }
+    
+    if let Some(stroke_width) = &shape.stroke_width {
+        style_map.insert("stroke-width".to_string(), stroke_width.clone());
+    }
+    
+    // Build style string
+    let style = style_map.iter()
+        .map(|(k, v)| format!("{}:{};", k, v))
+        .collect::<Vec<_>>()
+        .join("");
+    
+    elem.push_attribute(("style", &style));
+}

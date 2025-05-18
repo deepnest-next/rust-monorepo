@@ -1,0 +1,26 @@
+[package]
+name = "lightburn-converter"
+description = "Convert between LightBurn (lbrn/lbrn2) and SVG files"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+clap = { version = "4.4.11", features = ["derive"] }
+roxmltree = "0.20.0"
+quick-xml = { version = "0.37.5", features = ["serialize"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0.12"
+log = "0.4"
+env_logger = "0.11.8"
+anyhow = "1.0"
+
+[lib]
+name = "lightburn_converter"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lightburn-converter"
+path = "src/main.rs"

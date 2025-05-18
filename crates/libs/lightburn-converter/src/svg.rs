@@ -1,0 +1,631 @@
+//! SVG file parsing and generation
+
+use roxmltree::{Document, Node};
+use quick_xml::{Writer, events::{Event, BytesStart, BytesEnd}};
+use std::io::Cursor;
+
+use crate::types::{
+    ConversionError, LightburnFile, SvgFile, Shape, ShapeType,
+    Transform, Path, PathCommand,
+};
+
+/// Parse SVG file content into our internal representation
+pub fn parse(content: &str) -> Result<SvgFile, ConversionError> {
+    let doc = Document::parse(content)
+        .map_err(|e| ConversionError::XmlParseError(e.to_string()))?;
+    
+    let root = doc.root_element();
+    if !root.has_tag_name("svg") {
+        return Err(ConversionError::XmlParseError("Root element is not <svg>".to_string()));
+    }
+    
+    // Extract basic SVG info
+    let width = root.attribute("width").map(|s| s.to_string());
+    let height = root.attribute("height").map(|s| s.to_string());
+    let view_box = root.attribute("viewBox").map(|s| s.to_string());
+    
+    // Parse shapes from the SVG
+    let shapes = parse_svg_shapes(&root)?;
+    
+    Ok(SvgFile {
+        width,
+        height,
+        view_box,
+        shapes,
+    })
+}
+
+/// Parse shapes from an SVG document
+fn parse_svg_shapes(node: &Node) -> Result<Vec<Shape>, ConversionError> {
+    let mut shapes = Vec::new();
+    
+    // Process direct child elements that are shapes
+    for child in node.children().filter(|n| n.is_element()) {
+        match child.tag_name().name() {
+            "rect" => {
+                shapes.push(parse_svg_rect(&child)?);
+            },
+            "circle" => {
+                shapes.push(parse_svg_circle(&child)?);
+            },
+            "ellipse" => {
+                shapes.push(parse_svg_ellipse(&child)?);
+            },
+            "path" => {
+                shapes.push(parse_svg_path(&child)?);
+            },
+            "g" => {
+                shapes.push(parse_svg_group(&child)?);
+            },
+            // Ignore other tags for now
+            _ => {}
+        }
+    }
+    
+    Ok(shapes)
+}
+
+/// Parse an SVG rect element
+fn parse_svg_rect(node: &Node) -> Result<Shape, ConversionError> {
+    // Required attributes
+    let x = node.attribute("x")
+        .unwrap_or("0")
+        .parse::<f64>()
+        .unwrap_or(0.0);
+    
+    let y = node.attribute("y")
+        .unwrap_or("0")
+        .parse::<f64>()
+        .unwrap_or(0.0);
+    
+    let width = node.attribute("width")
+        .ok_or_else(|| ConversionError::InvalidShapeData("Rectangle missing width".to_string()))?
+        .parse::<f64>()
+        .map_err(|_| ConversionError::InvalidShapeData("Invalid rectangle width".to_string()))?;
+    
+    let height = node.attribute("height")
+        .ok_or_else(|| ConversionError::InvalidShapeData("Rectangle missing height".to_string()))?
+        .parse::<f64>()
+        .map_err(|_| ConversionError::InvalidShapeData("Invalid rectangle height".to_string()))?;
+    
+    // Optional attributes
+    let rx = node.attribute("rx").and_then(|s| s.parse::<f64>().ok());
+    let ry = node.attribute("ry").and_then(|s| s.parse::<f64>().ok());
+    
+    // Use the same corner radius for both if only one is specified
+    let corner_radius = match (rx, ry) {
+        (Some(rx_val), None) => Some(rx_val),
+        (None, Some(ry_val)) => Some(ry_val),
+        (Some(rx_val), Some(ry_val)) => Some((rx_val + ry_val) / 2.0), // Average both values
+        (None, None) => None,
+    };
+    
+    // Parse transform if present
+    let transform = parse_svg_transform(node.attribute("transform"));
+    
+    // Create shape
+    let shape = Shape {
+        shape_type: ShapeType::Rect,
+        cut_index: None, // Will be assigned during conversion to LightBurn
+        transform: Some(Transform {
+            a: 1.0,
+            b: 0.0,
+            c: 0.0,
+            d: 1.0,
+            e: x,
+            f: y,
+        }),
+        width: Some(width),
+        height: Some(height),
+        corner_radius,
+        rx: None,
+        ry: None,
+        path: None,
+        children: None,
+        style: parse_style(node),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    Ok(shape)
+}
+
+/// Parse an SVG circle element
+fn parse_svg_circle(node: &Node) -> Result<Shape, ConversionError> {
+    // Required attributes
+    let cx = node.attribute("cx")
+        .unwrap_or("0")
+        .parse::<f64>()
+        .unwrap_or(0.0);
+    
+    let cy = node.attribute("cy")
+        .unwrap_or("0")
+        .parse::<f64>()
+        .unwrap_or(0.0);
+    
+    let r = node.attribute("r")
+        .ok_or_else(|| ConversionError::InvalidShapeData("Circle missing radius".to_string()))?
+        .parse::<f64>()
+        .map_err(|_| ConversionError::InvalidShapeData("Invalid circle radius".to_string()))?;
+    
+    // Parse transform if present
+    let transform = parse_svg_transform(node.attribute("transform"));
+    
+    // Create shape as an ellipse with equal rx and ry
+    let shape = Shape {
+        shape_type: ShapeType::Ellipse,
+        cut_index: None, // Will be assigned during conversion to LightBurn
+        transform: Some(Transform {
+            a: 1.0,
+            b: 0.0,
+            c: 0.0,
+            d: 1.0,
+            e: cx,
+            f: cy,
+        }),
+        width: None,
+        height: None,
+        corner_radius: None,
+        rx: Some(r),
+        ry: Some(r),
+        path: None,
+        children: None,
+        style: parse_style(node),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    Ok(shape)
+}
+
+/// Parse an SVG ellipse element
+fn parse_svg_ellipse(node: &Node) -> Result<Shape, ConversionError> {
+    // Required attributes
+    let cx = node.attribute("cx")
+        .unwrap_or("0")
+        .parse::<f64>()
+        .unwrap_or(0.0);
+    
+    let cy = node.attribute("cy")
+        .unwrap_or("0")
+        .parse::<f64>()
+        .unwrap_or(0.0);
+    
+    let rx = node.attribute("rx")
+        .ok_or_else(|| ConversionError::InvalidShapeData("Ellipse missing rx".to_string()))?
+        .parse::<f64>()
+        .map_err(|_| ConversionError::InvalidShapeData("Invalid ellipse rx".to_string()))?;
+    
+    let ry = node.attribute("ry")
+        .ok_or_else(|| ConversionError::InvalidShapeData("Ellipse missing ry".to_string()))?
+        .parse::<f64>()
+        .map_err(|_| ConversionError::InvalidShapeData("Invalid ellipse ry".to_string()))?;
+    
+    // Parse transform if present
+    let transform = parse_svg_transform(node.attribute("transform"));
+    
+    // Create shape
+    let shape = Shape {
+        shape_type: ShapeType::Ellipse,
+        cut_index: None, // Will be assigned during conversion to LightBurn
+        transform: Some(Transform {
+            a: 1.0,
+            b: 0.0,
+            c: 0.0,
+            d: 1.0,
+            e: cx,
+            f: cy,
+        }),
+        width: None,
+        height: None,
+        corner_radius: None,
+        rx: Some(rx),
+        ry: Some(ry),
+        path: None,
+        children: None,
+        style: parse_style(node),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    Ok(shape)
+}
+
+/// Parse an SVG path element
+fn parse_svg_path(node: &Node) -> Result<Shape, ConversionError> {
+    // Get the d attribute with the path data
+    let d = node.attribute("d")
+        .ok_or_else(|| ConversionError::InvalidShapeData("Path missing data".to_string()))?;
+    
+    // Parse path data (simplified for this example)
+    let path = parse_svg_path_data(d)?;
+    
+    // Parse transform if present
+    let transform = parse_svg_transform(node.attribute("transform"));
+    
+    // Create shape
+    let shape = Shape {
+        shape_type: ShapeType::Path,
+        cut_index: None, // Will be assigned during conversion to LightBurn
+        transform,
+        width: None,
+        height: None,
+        corner_radius: None,
+        rx: None,
+        ry: None,
+        path: Some(path),
+        children: None,
+        style: parse_style(node),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    Ok(shape)
+}
+
+/// Parse an SVG group element
+fn parse_svg_group(node: &Node) -> Result<Shape, ConversionError> {
+    // Parse child shapes
+    let children = parse_svg_shapes(node)?;
+    
+    // Parse transform if present
+    let transform = parse_svg_transform(node.attribute("transform"));
+    
+    // Create group shape
+    let shape = Shape {
+        shape_type: ShapeType::Group,
+        cut_index: None,
+        transform,
+        width: None,
+        height: None,
+        corner_radius: None,
+        rx: None,
+        ry: None,
+        path: None,
+        children: Some(children),
+        style: parse_style(node),
+        fill: node.attribute("fill").map(|s| s.to_string()),
+        stroke: node.attribute("stroke").map(|s| s.to_string()),
+        stroke_width: node.attribute("stroke-width").map(|s| s.to_string()),
+    };
+    
+    Ok(shape)
+}
+
+/// Parse SVG path data (simplified implementation)
+fn parse_svg_path_data(_d: &str) -> Result<Path, ConversionError> {
+    // This is a very simplified implementation that doesn't actually parse the path
+    // A real implementation would parse the SVG path commands (M, L, C, Z, etc.)
+    
+    // For now, return an empty path
+    Ok(Path {
+        points: Vec::new(),
+        commands: Vec::new(),
+    })
+}
+
+/// Parse SVG transform attribute
+fn parse_svg_transform(transform_attr: Option<&str>) -> Option<Transform> {
+    match transform_attr {
+        None => None,
+        Some(transform_str) => {
+            // Default transform matrix
+            let mut transform = Transform::default();
+            
+            // Simple parsing of "matrix(a,b,c,d,e,f)" format
+            if transform_str.starts_with("matrix(") && transform_str.ends_with(")") {
+                let content = &transform_str[7..transform_str.len() - 1];
+                let parts: Vec<&str> = content.split(',').map(|s| s.trim()).collect();
+                
+                if parts.len() == 6 {
+                    transform.a = parts[0].parse().unwrap_or(1.0);
+                    transform.b = parts[1].parse().unwrap_or(0.0);
+                    transform.c = parts[2].parse().unwrap_or(0.0);
+                    transform.d = parts[3].parse().unwrap_or(1.0);
+                    transform.e = parts[4].parse().unwrap_or(0.0);
+                    transform.f = parts[5].parse().unwrap_or(0.0);
+                }
+            }
+            // Simple parsing of "translate(x,y)" format
+            else if transform_str.starts_with("translate(") && transform_str.ends_with(")") {
+                let content = &transform_str[10..transform_str.len() - 1];
+                let parts: Vec<&str> = content.split(',').map(|s| s.trim()).collect();
+                
+                if parts.len() >= 1 {
+                    transform.e = parts[0].parse().unwrap_or(0.0);
+                    if parts.len() >= 2 {
+                        transform.f = parts[1].parse().unwrap_or(0.0);
+                    }
+                }
+            }
+            // Simple parsing of "scale(x,y)" format
+            else if transform_str.starts_with("scale(") && transform_str.ends_with(")") {
+                let content = &transform_str[6..transform_str.len() - 1];
+                let parts: Vec<&str> = content.split(',').map(|s| s.trim()).collect();
+                
+                if parts.len() >= 1 {
+                    let sx = parts[0].parse().unwrap_or(1.0);
+                    let sy = if parts.len() >= 2 {
+                        parts[1].parse().unwrap_or(sx)
+                    } else {
+                        sx
+                    };
+                    
+                    transform.a = sx;
+                    transform.d = sy;
+                }
+            }
+            // Simple parsing of "rotate(angle)" format
+            else if transform_str.starts_with("rotate(") && transform_str.ends_with(")") {
+                let content = &transform_str[7..transform_str.len() - 1];
+                if let Ok(angle_deg) = content.parse::<f64>() {
+                    let angle_rad = angle_deg * std::f64::consts::PI / 180.0;
+                    let cos = angle_rad.cos();
+                    let sin = angle_rad.sin();
+                    
+                    transform.a = cos;
+                    transform.b = sin;
+                    transform.c = -sin;
+                    transform.d = cos;
+                }
+            }
+            
+            Some(transform)
+        }
+    }
+}
+
+/// Parse the style attribute
+fn parse_style(node: &Node) -> Option<String> {
+    node.attribute("style").map(|s| s.to_string())
+}
+
+/// Generate SVG from our internal representation
+pub fn generate(lightburn_file: &LightburnFile) -> Result<String, ConversionError> {
+    let buffer = Cursor::new(Vec::new());
+    let mut writer = Writer::new_with_indent(buffer, b' ', 2);
+    
+    // Start XML document
+    writer.write_event(Event::Decl(quick_xml::events::BytesDecl::new("1.0", Some("UTF-8"), None)))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Create SVG root element with default attributes
+    let mut elem = BytesStart::new("svg");
+    elem.push_attribute(("width", "100%"));
+    elem.push_attribute(("height", "100%"));
+    elem.push_attribute(("viewBox", "0 0 794 560"));
+    elem.push_attribute(("version", "1.1"));
+    elem.push_attribute(("xmlns", "http://www.w3.org/2000/svg"));
+    elem.push_attribute(("xmlns:xlink", "http://www.w3.org/1999/xlink"));
+    elem.push_attribute(("xml:space", "preserve"));
+    elem.push_attribute(("xmlns:serif", "http://www.serif.com/"));
+    elem.push_attribute(("style", "fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;"));
+    
+    writer.write_event(Event::Start(elem))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    // Write shapes - recursively process them
+    for shape in &lightburn_file.shapes {
+        write_svg_shape(&mut writer, shape)?;
+    }
+    
+    // End root element
+    writer.write_event(Event::End(BytesEnd::new("svg")))
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+    
+    String::from_utf8(writer.into_inner().into_inner())
+        .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))
+}
+
+/// Write a shape to the SVG document
+fn write_svg_shape<W: std::io::Write>(writer: &mut Writer<W>, shape: &Shape) -> Result<(), ConversionError> {
+    match &shape.shape_type {
+        ShapeType::Rect => {
+            let mut elem = BytesStart::new("rect");
+            
+            // Set position - may come from transform
+            if let Some(transform) = &shape.transform {
+                elem.push_attribute(("x", transform.e.to_string().as_str()));
+                elem.push_attribute(("y", transform.f.to_string().as_str()));
+            } else {
+                elem.push_attribute(("x", "0"));
+                elem.push_attribute(("y", "0"));
+            }
+            
+            // Set dimensions
+            if let Some(width) = shape.width {
+                elem.push_attribute(("width", width.to_string().as_str()));
+            }
+            
+            if let Some(height) = shape.height {
+                elem.push_attribute(("height", height.to_string().as_str()));
+            }
+            
+            // Set corner radius if present
+            if let Some(cr) = shape.corner_radius {
+                elem.push_attribute(("rx", cr.to_string().as_str()));
+                elem.push_attribute(("ry", cr.to_string().as_str()));
+            }
+            
+            // Add styling attributes
+            add_svg_style_attributes(&mut elem, shape);
+            
+            writer.write_event(Event::Empty(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+        },
+        ShapeType::Ellipse => {
+            // Check if it's a circle (rx == ry)
+            if shape.rx == shape.ry {
+                let mut elem = BytesStart::new("circle");
+                
+                if let Some(transform) = &shape.transform {
+                    elem.push_attribute(("cx", transform.e.to_string().as_str()));
+                    elem.push_attribute(("cy", transform.f.to_string().as_str()));
+                } else {
+                    elem.push_attribute(("cx", "0"));
+                    elem.push_attribute(("cy", "0"));
+                }
+                
+                if let Some(r) = shape.rx {
+                    elem.push_attribute(("r", r.to_string().as_str()));
+                }
+                
+                add_svg_style_attributes(&mut elem, shape);
+                
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            } else {
+                // It's an ellipse
+                let mut elem = BytesStart::new("ellipse");
+                
+                if let Some(transform) = &shape.transform {
+                    elem.push_attribute(("cx", transform.e.to_string().as_str()));
+                    elem.push_attribute(("cy", transform.f.to_string().as_str()));
+                } else {
+                    elem.push_attribute(("cx", "0"));
+                    elem.push_attribute(("cy", "0"));
+                }
+                
+                if let Some(rx) = shape.rx {
+                    elem.push_attribute(("rx", rx.to_string().as_str()));
+                }
+                
+                if let Some(ry) = shape.ry {
+                    elem.push_attribute(("ry", ry.to_string().as_str()));
+                }
+                
+                add_svg_style_attributes(&mut elem, shape);
+                
+                writer.write_event(Event::Empty(elem))
+                    .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            }
+        },
+        ShapeType::Path => {
+            let mut elem = BytesStart::new("path");
+              // Generate path data string
+            if let Some(path) = &shape.path {
+                let d = generate_svg_path_data(path);
+                elem.push_attribute(("d", d.as_str()));
+            }
+            
+            add_svg_style_attributes(&mut elem, shape);
+            
+            // Add transform if present and non-default
+            if let Some(transform) = &shape.transform {
+                if transform.a != 1.0 || transform.b != 0.0 || transform.c != 0.0 || transform.d != 1.0 || transform.e != 0.0 || transform.f != 0.0 {
+                    elem.push_attribute(("transform", format!(
+                        "matrix({},{},{},{},{},{})",
+                        transform.a, transform.b, transform.c, transform.d, transform.e, transform.f
+                    ).as_str()));
+                }
+            }
+            
+            writer.write_event(Event::Empty(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+        },
+        ShapeType::Group => {
+            let mut elem = BytesStart::new("g");
+            
+            // Add transform if present and non-default
+            if let Some(transform) = &shape.transform {
+                if transform.a != 1.0 || transform.b != 0.0 || transform.c != 0.0 || transform.d != 1.0 || transform.e != 0.0 || transform.f != 0.0 {
+                    elem.push_attribute(("transform", format!(
+                        "matrix({},{},{},{},{},{})",
+                        transform.a, transform.b, transform.c, transform.d, transform.e, transform.f
+                    ).as_str()));
+                }
+            }
+            
+            add_svg_style_attributes(&mut elem, shape);
+            
+            writer.write_event(Event::Start(elem))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+            
+            // Write children
+            if let Some(children) = &shape.children {
+                for child in children {
+                    write_svg_shape(writer, child)?;
+                }
+            }
+            
+            writer.write_event(Event::End(BytesEnd::new("g")))
+                .map_err(|e| ConversionError::XmlGenerateError(e.to_string()))?;
+        },
+        ShapeType::Other(_) => {
+            // Skip unknown shape types
+        }
+    }
+    
+    Ok(())
+}
+
+/// Generate SVG path data string from our internal path representation
+fn generate_svg_path_data(path: &Path) -> String {
+    let mut d = String::new();
+    
+    let mut _current_point_idx = 0;
+    
+    // Process commands
+    for cmd in &path.commands {
+        match cmd {            PathCommand::MoveTo(_, p1) => {
+                let p1_index = *p1;
+                let p = &path.points[p1_index];
+                d.push_str(&format!("M{},{} ", p.x, p.y));
+                _current_point_idx = p1_index;
+            },            PathCommand::LineTo(_, p1) => {
+                let p1_index = *p1;
+                let p = &path.points[p1_index];
+                d.push_str(&format!("L{},{} ", p.x, p.y));
+                _current_point_idx = p1_index;
+            },            PathCommand::BezierTo(p0, p1) => {
+                let p0_index = *p0;
+                let p1_index = *p1;
+                let p0 = &path.points[p0_index];
+                let p1 = &path.points[p1_index];
+                
+                // For cubic bezier, we need control points
+                if let (Some(c0x), Some(c0y)) = (p0.c0x, p0.c0y) {
+                    d.push_str(&format!("C{},{} ", c0x, c0y));
+                    
+                    if let (Some(c1x), Some(c1y)) = (p1.c1x, p1.c1y) {
+                        d.push_str(&format!("{},{} ", c1x, c1y));
+                    }
+                          d.push_str(&format!("{},{} ", p1.x, p1.y));                } else {
+                    // If no control points, fall back to a line
+                    d.push_str(&format!("L{},{} ", p1.x, p1.y));
+                }
+                
+                _current_point_idx = p1_index;
+            },
+            PathCommand::Close => {
+                d.push_str("Z ");
+            },
+        }
+    }
+    
+    d
+}
+
+/// Add style attributes to an SVG element
+fn add_svg_style_attributes<'a>(elem: &mut BytesStart<'a>, shape: &Shape) {
+    let mut style_parts = Vec::new();
+    
+    // Set fill (default to "none")
+    let fill = shape.fill.as_deref().unwrap_or("none");
+    style_parts.push(format!("fill:{}", fill));
+    
+    // Set stroke (default to black)
+    let stroke = shape.stroke.as_deref().unwrap_or("black");
+    style_parts.push(format!("stroke:{}", stroke));
+      // Set stroke width (default to 1px)
+    let stroke_width = shape.stroke_width.as_deref().unwrap_or("1px");
+    style_parts.push(format!("stroke-width:{}", stroke_width));
+    
+    // Combine into style attribute
+    let style = style_parts.join(";");
+    elem.push_attribute(("style", style.as_str()));
+}

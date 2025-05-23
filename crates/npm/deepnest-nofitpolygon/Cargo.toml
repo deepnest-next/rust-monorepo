@@ -1,0 +1,19 @@
+[package]
+name = "deepnest-nofitpolygon"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[build]
+rustflags = ["--cfg=napi_build"]
+
+[dependencies]
+napi = { version = "2", default-features = false, features = ["napi4"] }
+napi-derive = "2"
+babushka = { path = "../../libs/babushka" }

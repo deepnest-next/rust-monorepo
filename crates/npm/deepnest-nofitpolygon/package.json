@@ -1,0 +1,58 @@
+{
+  "name": "@deepnest/nofitpolygon",
+  "version": "0.1.0",
+  "description": "NAPI bindings for the no-fit polygon calculation from the babushka crate.",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "napi": {
+    "name": "deepnest-nofitpolygon",
+    "triples": {
+      "defaults": true,
+      "additional": [
+        "aarch64-unknown-linux-gnu",
+        "armv7-unknown-linux-gnueabihf",
+        "x86_64-unknown-linux-musl",
+        "aarch64-apple-darwin",
+        "aarch64-linux-android",
+        "x86_64-pc-windows-msvc",
+        "i686-pc-windows-msvc",
+        "aarch64-pc-windows-msvc"
+      ]
+    }
+  },
+  "scripts": {
+    "artifacts": "napi artifacts",
+    "build": "napi build --platform --release",
+    "build:debug": "napi build --platform",
+    "prepublishOnly": "napi prepublish -t npm",
+    "test": "ava",
+    "version": "napi version"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/deepnest-next/rust-monorepo.git"
+  },
+  "keywords": [
+    "deepnest",
+    "nofitpolygon",
+    "nfp",
+    "nesting",
+    "babushka",
+    "napi-rs",
+    "rust"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@napi-rs/cli": "^2.16.0",
+    "ava": "^5.0.0"
+  },
+  "engines": {
+    "node": ">= 10"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
+}

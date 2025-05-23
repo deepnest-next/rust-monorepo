@@ -8,7 +8,7 @@ members = [
     "crates/npm/node-clipper2",
     "crates/npm/deepnest_svg_preprocessor",
     "crates/bin/deepnest-server",
-    "./crates/plugins/deepnest-plugin-svg", "crates/plugins/deepnest-plugin-svg",
+    "./crates/plugins/deepnest-plugin-svg", "crates/plugins/deepnest-plugin-svg", "crates/npm/deepnest-nofitpolygon",
 ]
 
 [workspace.package]

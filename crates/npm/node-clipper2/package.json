@@ -11,13 +11,9 @@
     "name": "clipper2",
     "triples": {
       "additional": [
-        "aarch64-unknown-linux-gnu",
-        "aarch64-unknown-linux-musl",
-        "aarch64-pc-windows-msvc",
-        "x86_64-unknown-linux-musl",
-        "i686-pc-windows-msvc",
         "universal-apple-darwin",
-        "riscv64gc-unknown-linux-gnu"
+        "aarch64-unknown-linux-gnu",
+        "aarch64-pc-windows-msvc"
       ]
     }
   },

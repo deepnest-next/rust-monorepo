@@ -7,6 +7,10 @@
   "version": "0.2.0",
   "main": "index.js",
   "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts"
+  ],
   "napi": {
     "name": "svg-preprocessor",
     "triples": {

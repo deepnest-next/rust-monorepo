@@ -377,9 +377,5 @@ jobs:
           prerelease: false
       
       - name: Publish to NPM
-        run: |
-          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" >> ~/.npmrc
-          npm config set provenance true
-          npm publish --access public
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # npm trusted publishing (OIDC via id-token: write), no NPM_TOKEN; provenance is automatic
+        run: npm publish --access public

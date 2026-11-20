@@ -72,17 +72,17 @@ jobs:
           - host: windows-latest
             target: aarch64-pc-windows-msvc
             build: yarn build --target aarch64-pc-windows-msvc
-    name: stable - ${{ matrix.settings.target }} - node@20
+    name: stable - ${{ matrix.settings.target }} - node@24
     runs-on: ${{ matrix.settings.host }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: true
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         if: ${{ !matrix.settings.docker }}
         with:
-          node-version: 22
+          node-version: 24
           cache: yarn
       - name: Install
         uses: dtolnay/rust-toolchain@stable
@@ -91,7 +91,7 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.settings.target }}
       - name: Cache cargo
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry/index/
@@ -114,7 +114,7 @@ jobs:
         if: ${{ !matrix.settings.docker }}
         shell: bash
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: bindings-${{ matrix.settings.target }}
           path: ${{ github.workspace}}/crates/npm/deepnest_svg_preprocessor/${{ env.APP_NAME }}.*.node
@@ -132,13 +132,12 @@ jobs:
           - host: windows-latest
             target: x86_64-pc-windows-msvc
         node:
-          - "20"
-          - "22"
+          - "24"
     runs-on: ${{ matrix.settings.host }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: yarn
@@ -146,7 +145,7 @@ jobs:
       - name: Install dependencies
         run: yarn install
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bindings-${{ matrix.settings.target }}
           path: ${{ env.MYWORKDIR }}/
@@ -163,20 +162,19 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "20"
-          - "22"
+          - "24"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node }}
           cache: yarn
       - name: Install dependencies
         run: yarn install
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bindings-x86_64-unknown-linux-gnu
           path: ${{ env.MYWORKDIR }}/
@@ -193,13 +191,12 @@ jobs:
       fail-fast: false
       matrix:
         node:
-          - "20"
-          - "22"
+          - "24"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: bindings-aarch64-unknown-linux-gnu
           path: ${{ env.MYWORKDIR }}/
@@ -212,7 +209,7 @@ jobs:
           yarn config set supportedArchitectures.libc "glibc"
           yarn install
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@v4
         with:
           platforms: arm64
       - run: docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
@@ -236,14 +233,14 @@ jobs:
       version_type: ${{ steps.set-version.outputs.version_type }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: yarn
 
       - name: Install dependencies
@@ -318,11 +315,13 @@ jobs:
       - test-linux-aarch64-gnu-binding
       - version-bump
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: 22
+          ref: ${{ github.event.pull_request.base.ref || github.ref }}
+      - name: Setup node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
           cache: yarn
       - name: Install dependencies
         run: yarn install
@@ -340,7 +339,7 @@ jobs:
           cat package.json | grep version
       
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ${{ env.MYWORKDIR }}/artifacts
       
@@ -362,19 +361,18 @@ jobs:
           git commit -m "Release v${{ needs.version-bump.outputs.new_version }}"
           
       - name: Push changes
-        uses: ad-m/github-push-action@master
+        uses: ad-m/github-push-action@v1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ github.ref }}
+          # on a merged PR github.ref is refs/pull/<n>/merge, which cannot be pushed to
+          branch: ${{ github.event.pull_request.base.ref || github.ref_name }}
       
       - name: Create Release Tag
         id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: svg-preprocessor-v${{ needs.version-bump.outputs.new_version }}
-          release_name: SVG Preprocessor v${{ needs.version-bump.outputs.new_version }}
+          name: SVG Preprocessor v${{ needs.version-bump.outputs.new_version }}
           draft: false
           prerelease: false
       

@@ -6,7 +6,8 @@
   "files": [
     "index.js",
     "geometry.js",
-    "geometry.d.ts"
+    "geometry.d.ts",
+    "index.d.ts"
   ],
   "napi": {
     "name": "geometry-utils",

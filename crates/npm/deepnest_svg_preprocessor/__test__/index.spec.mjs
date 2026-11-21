@@ -7,17 +7,31 @@ function removeWindowsLineEndings(str) {
   return str.replace(/\r\n/g, '\n');
 }
 
+// Golden-file compare: the same text with every number replaced, and the numbers equal within
+// 1e-12 relative. The output keeps full f64 precision, and sin/cos (circle and ellipse
+// control points) differ in the last digit between platforms, e.g. x86_64 macOS.
+function assertSvgClose(t, actual, expected) {
+  const num = /-?\d*\.?\d+(?:e-?\d+)?/g
+  const a = removeWindowsLineEndings(actual)
+  const e = removeWindowsLineEndings(expected)
+  t.is(a.replace(num, '#'), e.replace(num, '#'))
+  const an = a.match(num).map(Number)
+  const en = e.match(num).map(Number)
+  const off = an.findIndex((v, i) => Math.abs(v - en[i]) > 1e-12 * Math.max(1, Math.abs(en[i])))
+  t.is(off, -1, off < 0 ? '' : `number ${off}: ${an[off]} vs ${en[off]}`)
+}
+
 test('loadSvgString from native', (t) => {
   const testSvg = readFileSync('./__test__/test.svg', 'utf8');
   const resultSvg = readFileSync('./__test__/result.svg', 'utf8');
   const result = loadSvgString(testSvg);
-  t.is(removeWindowsLineEndings(result.result), removeWindowsLineEndings(resultSvg))
+  assertSvgClose(t, result.result, resultSvg)
 })
 
 test('loadSvgFile from native', (t) => {
   const resultSvg = readFileSync('./__test__/result.svg', 'utf8');
   const result = loadSvgFile('./__test__/test.svg');
-  t.is(removeWindowsLineEndings(result.result), removeWindowsLineEndings(resultSvg))
+  assertSvgClose(t, result.result, resultSvg)
 })
 
 // usvg stored geometry as f32: a 1000 mm box came back 2834.6457 units wide (deepnest#137).

@@ -100,6 +100,13 @@ pub struct LoadSVGResult {
   pub result: String,
 }
 
+// Known precision limit: usvg stores all geometry as f32 (24-bit mantissa, about
+// 6e-8 relative), so coordinates come back rounded, not as the f64 the caller
+// passed in. At deepnest's 72 units/inch a 1000 mm box (2834.6456693 units)
+// returns as 2834.645752, a hair larger than a 1000 mm sheet typed in as a
+// number. deepnest accounts for this with a sheet tolerance in
+// main/background.js (sheetTolerance, deepnest-next/deepnest#137).
+// Same for load_svg_file.
 #[napi]
 pub fn load_svg_string(svg_data: String, dpi_scale: Option<f64>) -> LoadSVGResult {
   let mut config = usvg::Options::default();

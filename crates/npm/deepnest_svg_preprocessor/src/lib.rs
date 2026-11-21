@@ -6,10 +6,10 @@ mod path_data_parser;
 mod points_on_curve;
 mod points_on_path;
 mod simplify_polygon;
+pub mod svg_f64;
 mod svg_flip; // added new module for SVG flip
 use std::fs;
 use std::path::Path;
-use usvg::Tree;
 
 // Export both internal functions for benchmarking and testing
 pub use convex_hull::compute_convex_hull;
@@ -100,18 +100,18 @@ pub struct LoadSVGResult {
   pub result: String,
 }
 
+// usvg stores geometry as f32: a 1000 mm box came back 2834.6457 units wide instead of
+// 2834.645669291339 (deepnest#137). `svg_f64` keeps the file's numbers in f64 and writes
+// one absolute `<path>` per shape, all transforms applied. `//`, not `///`: napi copies doc
+// comments into the tracked index.d.ts.
 #[napi]
 pub fn load_svg_string(svg_data: String, dpi_scale: Option<f64>) -> LoadSVGResult {
-  let mut config = usvg::Options::default();
-  config.dpi = dpi_scale.unwrap_or(72.0) as f64 as f32;
-  match Tree::from_str(&svg_data, &config) {
-    Ok(tree) => {
-      let output = tree.to_string(&usvg::WriteOptions::default());
-      LoadSVGResult {
-        success: true,
-        result: output,
-      }
-    }
+  let dpi = dpi_scale.unwrap_or(72.0);
+  match svg_f64::parse(&svg_data, svg_f64::Units { px: 1.0, inch: dpi }) {
+    Ok(svg) => LoadSVGResult {
+      success: true,
+      result: to_svg_string(&svg),
+    },
     Err(err) => LoadSVGResult {
       success: false,
       result: format!("Fehler beim Parsen der SVG: {}", err),
@@ -121,8 +121,6 @@ pub fn load_svg_string(svg_data: String, dpi_scale: Option<f64>) -> LoadSVGResul
 
 #[napi]
 pub fn load_svg_file(svg_path: String, dpi_scale: Option<f64>) -> LoadSVGResult {
-  let mut config = usvg::Options::default();
-  config.dpi = dpi_scale.unwrap_or(72.0) as f64 as f32;
   // Konvertieren Sie den String in ein Path
   let path = Path::new(&svg_path);
 
@@ -145,18 +143,63 @@ pub fn load_svg_file(svg_path: String, dpi_scale: Option<f64>) -> LoadSVGResult 
     }
   };
 
-  // SVG in usvg::Tree parsen
-  match Tree::from_data(&svg_data, &usvg::Options::default()) {
-    Ok(tree) => {
-      let output = tree.to_string(&usvg::WriteOptions::default());
-      LoadSVGResult {
-        success: true,
-        result: output,
-      }
+  // SVGZ entpacken
+  let svg_data = if svg_data.starts_with(&[0x1f, 0x8b]) {
+    use std::io::Read;
+    let mut out = Vec::new();
+    if let Err(err) = flate2::read::GzDecoder::new(&svg_data[..]).read_to_end(&mut out) {
+      return LoadSVGResult {
+        success: false,
+        result: format!("Fehler beim Entpacken der SVGZ: {}", err),
+      };
     }
-    Err(err) => LoadSVGResult {
+    out
+  } else {
+    svg_data
+  };
+
+  match String::from_utf8(svg_data) {
+    Ok(text) => load_svg_string(text, dpi_scale),
+    Err(_) => LoadSVGResult {
       success: false,
-      result: format!("Fehler beim Parsen der SVG: {}", err),
+      result: "Fehler beim Parsen der SVG: keine gültige UTF-8-Datei".to_string(),
     },
   }
+}
+
+/// One `<path>` per visible shape, absolute coordinates, every number as the shortest
+/// string that reads back to the same f64.
+fn to_svg_string(svg: &svg_f64::Svg) -> String {
+  use std::fmt::Write;
+  use svg_f64::{Paint, Seg};
+  let paint = |p: Paint| match p {
+    Paint::None => "none".to_string(),
+    Paint::Color([r, g, b]) => format!("#{r:02x}{g:02x}{b:02x}"),
+    Paint::Server => "#000000".to_string(),
+  };
+  let mut out = format!(
+    "<svg width=\"{}\" height=\"{}\" xmlns=\"http://www.w3.org/2000/svg\">\n",
+    svg.width, svg.height
+  );
+  for shape in svg.shapes.iter().filter(|s| s.visible) {
+    let mut d = String::new();
+    for seg in &shape.segs {
+      let _ = match *seg {
+        Seg::Move([x, y]) => write!(d, "M {x} {y} "),
+        Seg::Line([x, y]) => write!(d, "L {x} {y} "),
+        Seg::Quad([x1, y1], [x, y]) => write!(d, "Q {x1} {y1} {x} {y} "),
+        Seg::Cubic([x1, y1], [x2, y2], [x, y]) => write!(d, "C {x1} {y1} {x2} {y2} {x} {y} "),
+        Seg::Close => write!(d, "Z "),
+      };
+    }
+    let _ = writeln!(
+      out,
+      "    <path fill=\"{}\" stroke=\"{}\" d=\"{}\"/>",
+      paint(shape.fill),
+      paint(shape.stroke),
+      d.trim_end()
+    );
+  }
+  out.push_str("</svg>\n");
+  out
 }

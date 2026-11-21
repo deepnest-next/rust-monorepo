@@ -47,6 +47,11 @@ napi = { version = "2.16", features = [
 ] }
 napi-derive = { version = "2.16", default-features = true}
 usvg = "0.45"
+# f64 SVG import (svg-preprocessor): the same versions usvg 0.45 brings in.
+roxmltree = "0.20"
+svgtypes = "0.15"
+simplecss = "0.2"
+flate2 = "1"
 napi-build = "2.1"
 cfg-if = "1"
 delegate = "0.13" 
